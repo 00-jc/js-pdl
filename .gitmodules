@@ -1,0 +1,3 @@
+[submodule "xft"]
+	path = xft
+	url = https://codeberg.org/00jc/xft
