@@ -2,7 +2,7 @@
 #include "xft.h"
 
 __attribute__((noinline))
-t_result	lex_next_token(t_buffer src, t_vec *__restrict__ const vec)
+t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t_vec *__restrict__ const vec)
 {
 	
 	static const t_any states[] = {

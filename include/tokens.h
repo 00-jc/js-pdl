@@ -64,3 +64,7 @@ typedef struct s_token
 		t_u64a value;
 	} 				as;
 }	t_token;
+
+typedef struct s_lexer_state {
+	t_u32a offset;
+} s_lexer_state;
