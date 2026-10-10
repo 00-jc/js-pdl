@@ -19,7 +19,7 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 		['<']				= &&operator_followed_by_equal,
 		['>']				= &&operator_followed_by_equal,
 		['+']				= &&possible_operator_followed_by_eq_or_double,
-		['-']				= &&possible_operator_followed_by_eq_or_double,
+		['-']				= &&possible_double_operator,
 		['*']				= &&operator_followed_by_equal,
 		['/']				= &&div_or_comment,
 		['a' ... 'z']		= &&identifier,
@@ -45,6 +45,8 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 	possible_operator_followed_by_eq_or_double: // +, -
 
 	operator_followed_by_equal:
+
+	possible_double_operator:
 
 	single_char_token:
 
