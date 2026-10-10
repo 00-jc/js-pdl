@@ -51,10 +51,8 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 	div_or_comment:
 
 	success:
-
-	return (OK);
+		return (xft_vec_push_back(allocator, vec, (const t_u8 *)&tok, sizeof(t_token)));
 
 	unexpected_char:
-
 	return (KO);
 }

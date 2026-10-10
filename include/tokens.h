@@ -67,6 +67,8 @@ typedef struct s_token
 	} 				as;
 }	t_token;
 
+
 typedef struct s_lexer_state {
 	t_u32a offset;
-} s_lexer_state;
+
+t_result		lex_next_token(t_allocator allocator, t_buffer src, t_vec* __restrict__ const vec);
