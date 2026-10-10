@@ -1,3 +1,4 @@
+#include "diag.h"
 #include "tokens.h"
 #include "xft.h"
 
@@ -5,10 +6,12 @@ __attribute__((noinline))
 t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t_vec *__restrict__ const vec)
 {
 	
+	DIAG_JUMP_TABLE_BEGIN
 	static const t_any states[] = {
-		// [0 ... UINT8_MAX] = &&unexpected_char,	
-		// [','] = &&single_char_token,
+		[0 ... UINT8_MAX] = &&unexpected_char,
+		[','] = &&single_char_token,
 	};
+	DIAG_JUMP_TABLE_END
 
 	t_token		tok;
 
