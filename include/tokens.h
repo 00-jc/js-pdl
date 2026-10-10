@@ -41,14 +41,14 @@ typedef enum e_token_type {
 	TOK_OR,
 	TOK_BANG = '!',
 
-	TOK_LT = '<',
-	TOK_GT = '>',
-	TOK_LE,
-	TOK_GE,
-	TOK_NE,
-	TOK_EQEQ,
+	TOK_LT		= '<',
+	TOK_GT		= '>',
+	TOK_LE		= '<' | 0x80,
+	TOK_GE		= '>' | 0x80,
+	TOK_NE		= '!' | 0x80,
+	TOK_EQEQ	= '=' | 0x80,
 
-	TOK_ADDEQ,
+	TOK_ADDEQ	= '+' | 0x80,
 	
 	TOK_TRUE,
 	TOK_FALSE,
