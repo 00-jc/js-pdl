@@ -56,11 +56,11 @@ typedef struct s_token
 {
 	t_token_type	type;
 	union {
-		struct lexeme
+		struct
 		{
 			t_u32a	start;
 			t_u32a	end;
-		};
+		} lexeme;
 		t_u64a value;
 	} 				as;
 }	t_token;
