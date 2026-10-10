@@ -24,3 +24,9 @@
 # define DIAG_JUMP_TABLE_BEGIN
 # define DIAG_JUMP_TABLE_END
 #endif
+
+/* Computed goto (`goto *expr;`) without the GNU-extension warning. */
+#define DIAG_GOTO(target) \
+	DIAG_JUMP_TABLE_BEGIN \
+	goto *(target); \
+	DIAG_JUMP_TABLE_END

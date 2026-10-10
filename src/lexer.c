@@ -8,14 +8,33 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 	
 	DIAG_JUMP_TABLE_BEGIN
 	static const t_any states[] = {
-		[0 ... UINT8_MAX] = &&unexpected_char,
-		[','] = &&single_char_token,
+		[0 ... UINT8_MAX]	= &&unexpected_char,
+		[0]					= &&success,
+		[',']				= &&single_char_token,
+		[';']				= &&single_char_token,
+		['(']				= &&single_char_token,
+		[')']				= &&single_char_token,
+		['{']				= &&single_char_token,
+		['}']				= &&single_char_token,
+		['<']				= &&operator_followed_by_equal,
+		['>']				= &&operator_followed_by_equal,
+		['+']				= &&possible_operator_followed_by_eq_or_double,
+		['-']				= &&possible_operator_followed_by_eq_or_double,
+		['*']				= &&operator_followed_by_equal,
+		['/']				= &&div_or_comment,
+		['a' ... 'z']		= &&identifier,
+		['A' ... 'Z']		= &&identifier,
+		['_']				= &&identifier,
+		['0' ... '9']		= &&numeric_constant,
+		['"']				= &&string_literal,
 	};
 	DIAG_JUMP_TABLE_END
 
 	t_token		tok;
 
 	tok.type	= TOK_EOF;
+
+	DIAG_GOTO(states[src.mem[state->offset++]]);
 
 	identifier:
 
@@ -27,8 +46,6 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 
 	operator_followed_by_equal:
 
-	double_char_token:
-
 	single_char_token:
 
 	div_or_comment:
@@ -38,4 +55,6 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 	return (OK);
 
 	unexpected_char:
+
+	return (KO);
 }
