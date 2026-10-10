@@ -3,6 +3,12 @@
 __attribute__((__nonnull__(1), noreturn))
 void	xft_main(const t_any *__restrict__ const sp)
 {
+	t_kernel_ptrs	ptrs;
+	t_writer		_stdout;
+	t_writer		_stderr;
+	t_u8			_stdout_buffer[1024];
+	t_u8			_stderr_buffer[1024];
+
 	// @Jaime: roadmap:
 	//
 	// - use xft_map_file to get the file contents
@@ -38,6 +44,11 @@ void	xft_main(const t_any *__restrict__ const sp)
 	//	 AND simd optimizations once we are in a dispatched
 	//	 state that supports it.
 
-	(void)sp; // @Jaime: make it compile with -Wall
+	(void)_stderr;
+	ptrs = xft_get_kernel_ptrs(sp);
+	_stderr = xft_get_fs_writer(xft_fatptr(_stderr_buffer, 1024), xft_get_stderr());
+	_stdout = xft_get_fs_writer(xft_fatptr(_stdout_buffer, 1024), xft_get_stdout());
+	xft_fmt_writer(&_stdout, xft_fatptr((t_any)"argc: %q\n", sizeof("argc: %q\n")), &ptrs.argc);
+	xft_writer_flush(&_stdout);
 	xft_exit(0);
 }
