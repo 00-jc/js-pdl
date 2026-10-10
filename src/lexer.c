@@ -3,7 +3,7 @@
 #include "xft.h"
 
 __attribute__((noinline))
-t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t_vec *__restrict__ const vec)
+t_result	lex_next_token(t_allocator allocator, t_buffer src, t_lexer_state *__restrict__ const state, t_vec *__restrict__ const vec)
 {
 	
 	DIAG_JUMP_TABLE_BEGIN
@@ -18,7 +18,7 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 		['}']				= &&single_char_token,
 		['<']				= &&operator_followed_by_equal,
 		['>']				= &&operator_followed_by_equal,
-		['+']				= &&possible_operator_followed_by_eq_or_double,
+		['+']				= &&possible_operator_followed_by_eq_or,
 		['-']				= &&possible_double_operator,
 		['*']				= &&operator_followed_by_equal,
 		['/']				= &&div_or_comment,
@@ -33,6 +33,9 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 	t_token		tok;
 
 	tok.type	= TOK_EOF;
+	tok.as.lexeme.start = state->offset;
+
+	t_u64a current = src.mem[state->offset];
 
 	DIAG_GOTO(states[src.mem[state->offset++]]);
 
@@ -42,8 +45,15 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 
 	string_literal:
 
-	possible_operator_followed_by_eq_or_double: // +, -
+	possible_operator_followed_by_eq_or: // +
+		t_u32a idx =  xft_tern(state->offset + 1 < src.mem, state->offset + 1, state->offset);
+		t_u64a next = xft_tern(state->offset + 1 < src.mem, src.mem[idx], 0);
+		t_token_type type = xft_tern(next == "=", TOK_ADDEQ, TOK_ADD);
+		t_u64a newOffset = xft_tern(next == "=", 2, 1);
 
+		state->offset += newOffset; // Leer caracteres
+		tok.type = type;
+		goto success;
 	operator_followed_by_equal:
 
 	possible_double_operator:
