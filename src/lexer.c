@@ -23,13 +23,14 @@ t_result	lex_next_token(t_buffer src, s_lexer_state *__restrict__ const state, t
 
 	string_literal:
 
-	possible_operator_followed_by_eq_or_double: // +, -
+	possible_operator_followed_by_eq_or: // +
 		t_u32a idx =  xft_tern(state->offset + 1 < src.mem, state->offset + 1, state->offset);
 		t_u64a next = xft_tern(state->offset + 1 < src.mem, src.mem[idx], 0);
 		t_token_type type = xft_tern(next == "=", TOK_ADDEQ, TOK_ADD);
 		t_u64a newOffset = xft_tern(next == "=", 2, 1);
 
 		state->offset += newOffset; // Leer caracteres
+		tok.type = type;
 		goto success;
 	operator_followed_by_equal:
 
