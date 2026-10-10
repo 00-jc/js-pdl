@@ -50,7 +50,7 @@ typedef enum e_token_type {
 	
 	TOK_TRUE,
 	TOK_FALSE,
-}	t_token;
+}	t_token_type;
 
 typedef struct s_token
 {
