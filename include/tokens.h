@@ -2,7 +2,7 @@
 
 #include <xft.h>
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201710L
 # define BACKING_STORAGE_ENUM(t) : t
 #elif
 # define BACKING_STORAGE_ENUM(t)
