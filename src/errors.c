@@ -28,7 +28,7 @@ t_u32a	line_of_token(const t_error_state *__restrict__ const state, t_u32a offse
 	t_u32a			half;
 
 	arr = (const t_u32a *)state->line_offsets.buf.mem;
-	n = (t_u32a)(state->line_offsets.size);
+	n = (t_u32a)xft_vec_len(&state->line_offsets, sizeof(t_u32a));
 	if (__builtin_expect(n == 0, 0)) return (0);
 	base = arr;
 	while (n > 1)
