@@ -2,6 +2,44 @@
 #include "diag.h"
 #include "lexer.h"
 
+#if XFT_HAS_512_VEC
+
+# define HAS_VECS
+# define NATIVE_VEC			t_vu512a
+# define NATIVE_VEC_PTR		t_blk512r
+# define VEC_MASK			t_u64
+# define SPLAT(x)			xft_vsplat512((x))
+# define MASK(x)			xft_vmask512((x))
+# define RANGEMASK(x, y, z) xft_rangemask512((x), (y), (z))
+# define CTZ(x)				xft_memctz_u64((x))
+# define POPCNT(x)			xft_popcount_u64((x))
+
+#elif XFT_HAS_256_VEC
+
+# define HAS_VECS
+# define NATIVE_VEC			t_vu256a
+# define NATIVE_VEC_PTR		t_blk256r
+# define VEC_MASK			t_u32
+# define SPLAT(x)			xft_vsplat256((x))
+# define MASK(x)			xft_vmask256((x))
+# define RANGEMASK(x, y, z) xft_rangemask256((x), (y), (z))
+# define CTZ(x)				xft_memctz_u32((x))
+# define POPCNT(x)			xft_popcount_u32((x))
+
+#elif XFT_HAS_128_VEC
+
+# define HAS_VECS
+# define NATIVE_VEC			t_vu128a
+# define NATIVE_VEC_PTR		t_blk128r
+# define VEC_MASK			t_u16
+# define SPLAT(x)			xft_vsplat128((x))
+# define MASK(x)			xft_vmask128((x))
+# define RANGEMASK(x, y, z) xft_rangemask128((x), (y), (z))
+# define CTZ(x)				xft_memctz_u16((x))
+# define POPCNT(x)			xft_popcount_u32((x) | (t_u32)0)
+
+#endif
+
 DIAG_FAM_INIT_BEGIN
 const t_soa_context	token_soa_ctx = {
 	.total_struct_size	= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE + TOKEN_SOA_SYMBOL_SIZE,
@@ -106,9 +144,23 @@ whitespace:
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
 	tok.symbol			= 0;
+#ifdef HAS_VECS 
+		vector_ws_loop: if (src.size  - state->offset >= sizeof(NATIVE_VEC))
+		{
+			NATIVE_VEC x = *(NATIVE_VEC_PTR)(src.mem + state->offset);
+			VEC_MASK end = (VEC_MASK)~(MASK(x == ' ') | RANGEMASK(x, '\t', '\r'));
+			if (__builtin_expect(end != 0, 1))
+				state->offset += CTZ(end);
+			else {
+				state->offset += sizeof(NATIVE_VEC);
+				goto vector_ws_loop;
+			}
+		}
+#endif
+whitespace_scalar:
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
-	if (xft_isspace(dispatched)) goto whitespace;
+	if (xft_isspace(dispatched)) goto whitespace_scalar;
 
 	tok.as.lexeme.start = state->offset - 1;
 
@@ -117,8 +169,23 @@ whitespace:
 	identifier: // [a-z][A-Z]_ | utf8
 	{
 		tok.type = TOK_IDENTIFIER;
+#ifdef HAS_VECS 
+		vector_id_loop: if (src.size  - state->offset >= sizeof(NATIVE_VEC))
+		{
+			NATIVE_VEC x = *(NATIVE_VEC_PTR)(src.mem + state->offset);
+			VEC_MASK mask = RANGEMASK(x | 0x20, 'a', 'z') | MASK(x == '_') | RANGEMASK(x, 0x80, 0xFF) | RANGEMASK(x, '0', '9');
+			VEC_MASK end = (VEC_MASK)~mask;
+			if (__builtin_expect(end != 0, 1)) {
+				state->offset += CTZ(end);
+				goto kw_selection;
+			}
+			state->offset += sizeof(NATIVE_VEC);
+			goto vector_id_loop;
+		}
+#endif
 		while (state->offset < src.size && (xft_isalpha(src.mem[state->offset]) | xft_isdigit(src.mem[state->offset]) | (src.mem[state->offset] == '_') | (src.mem[state->offset] >= 0x80)))
 			++state->offset;
+		kw_selection:
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
@@ -153,6 +220,20 @@ whitespace:
 	numeric_constant:
 	{
 		tok.type = TOK_CONST_INT;
+
+#ifdef HAS_VECS 
+		vector_int_loop: if (src.size  - state->offset >= sizeof(NATIVE_VEC))
+		{
+			NATIVE_VEC x = *(NATIVE_VEC_PTR)(src.mem + state->offset);
+			VEC_MASK end = (VEC_MASK)~RANGEMASK(x, '0', '9');
+			if (__builtin_expect(end != 0, 1))
+				state->offset += CTZ(end);
+			else {
+				state->offset += sizeof(NATIVE_VEC);
+				goto vector_int_loop;
+			}
+		}
+#endif
 		while (state->offset < src.size && xft_isdigit(src.mem[state->offset]))
 			++state->offset;
 		if (state->offset < src.size && src.mem[state->offset] == '.')
@@ -171,6 +252,19 @@ whitespace:
 		t_u32a decimal_start = state->offset;
 		tok.type = TOK_CONST_FLOAT;
 
+#ifdef HAS_VECS 
+		vector_fp_loop: if (src.size  - state->offset >= sizeof(NATIVE_VEC))
+		{
+			NATIVE_VEC x = *(NATIVE_VEC_PTR)(src.mem + state->offset);
+			VEC_MASK end = (VEC_MASK)~RANGEMASK(x, '0', '9');
+			if (__builtin_expect(end != 0, 1))
+				state->offset += CTZ(end);
+			else {
+				state->offset += sizeof(NATIVE_VEC);
+				goto vector_fp_loop;
+			}
+		}
+#endif
 		while (state->offset < src.size && xft_isdigit(src.mem[state->offset]))
 			++state->offset;
 
