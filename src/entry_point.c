@@ -81,6 +81,17 @@ void	xft_main(const t_any *__restrict__ const sp)
 		if (__builtin_expect(ttype[tokens_soa.occupied_elements - 1] == TOK_EOF, 0)) break;
 	}
 
+	// @Jaime: for debugging
+	// if (result == OK)
+	// {
+	// 	const t_token_type *__restrict__ const ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
+	// 	for (t_size i = 0; i < tokens_soa.occupied_elements; i++)
+	// 	{
+	// 		xft_writer_write(&_stdout, token_type_to_string(ttype[i]));
+	// 		xft_writer_write(&_stdout, xft_fatptr((t_any)"\n", 1));
+	// 	}
+	// }
+
 	xft_unmap_file(src_buf);
 	xft_vec_destroy(allocator, &err_state.line_offsets);
 	xft_destroy_soa(allocator, &tokens_soa);

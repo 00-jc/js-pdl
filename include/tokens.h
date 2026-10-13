@@ -81,3 +81,59 @@ enum e_token_soa_field {
 #define TOKEN_SOA_SYMBOL_SIZE	sizeof(((t_token *)0)->symbol)
 
 extern const t_soa_context	token_soa_ctx;
+
+__attribute__((__always_inline__, const))
+static inline t_buffer	token_type_to_string(t_token_type tokt)
+{
+#define TOKT_STR(s) xft_fatptr((t_any)s, sizeof(s) - 1)
+
+	switch (tokt)
+	{
+		case TOK_EOF:             return (TOKT_STR("EOF"));
+		case TOK_STRING_LITERAL:  return (TOKT_STR("STRING_LITERAL"));
+		case TOK_BOOL:            return (TOKT_STR("BOOL"));
+		case TOK_BREAK:           return (TOKT_STR("BREAK"));
+		case TOK_DO:              return (TOKT_STR("DO"));
+		case TOK_ECHO:            return (TOKT_STR("ECHO"));
+		case TOK_FLOAT:           return (TOKT_STR("FLOAT"));
+		case TOK_FUNC:            return (TOKT_STR("FUNC"));
+		case TOK_IF:              return (TOKT_STR("IF"));
+		case TOK_INT:             return (TOKT_STR("INT"));
+		case TOK_LET:             return (TOKT_STR("LET"));
+		case TOK_PROMPT:          return (TOKT_STR("PROMPT"));
+		case TOK_RETURN:          return (TOKT_STR("RETURN"));
+		case TOK_STRING:          return (TOKT_STR("STRING"));
+		case TOK_VOID:            return (TOKT_STR("VOID"));
+		case TOK_WHILE:           return (TOKT_STR("WHILE"));
+		case TOK_CONST_FLOAT:     return (TOKT_STR("CONST_FLOAT"));
+		case TOK_CONST_INT:       return (TOKT_STR("CONST_INT"));
+		case TOK_IDENTIFIER:      return (TOKT_STR("IDENTIFIER"));
+		case TOK_EQ:              return (TOKT_STR("EQ"));
+		case TOK_COMMA:           return (TOKT_STR("COMMA"));
+		case TOK_SEMI:            return (TOKT_STR("SEMI"));
+		case TOK_LPAREN:          return (TOKT_STR("LPAREN"));
+		case TOK_RPAREN:          return (TOKT_STR("RPAREN"));
+		case TOK_LBRACE:          return (TOKT_STR("LBRACE"));
+		case TOK_RBRACE:          return (TOKT_STR("RBRACE"));
+		case TOK_ADD:             return (TOKT_STR("ADD"));
+		case TOK_MUL:             return (TOKT_STR("MUL"));
+		case TOK_DIV:             return (TOKT_STR("DIV"));
+		case TOK_SUB:             return (TOKT_STR("SUB"));
+		case TOK_REM:             return (TOKT_STR("REM"));
+		case TOK_AND:             return (TOKT_STR("AND"));
+		case TOK_OR:              return (TOKT_STR("OR"));
+		case TOK_BANG:            return (TOKT_STR("BANG"));
+		case TOK_LT:              return (TOKT_STR("LT"));
+		case TOK_GT:              return (TOKT_STR("GT"));
+		case TOK_LE:              return (TOKT_STR("LE"));
+		case TOK_GE:              return (TOKT_STR("GE"));
+		case TOK_NE:              return (TOKT_STR("NE"));
+		case TOK_EQEQ:            return (TOKT_STR("EQEQ"));
+		case TOK_ADDEQ:           return (TOKT_STR("ADDEQ"));
+		case TOK_TRUE:            return (TOKT_STR("TRUE"));
+		case TOK_FALSE:           return (TOKT_STR("FALSE"));
+	}
+	return (TOKT_STR("UNKNOWN"));
+
+#undef TOKT_STR
+}
