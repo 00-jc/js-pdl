@@ -100,7 +100,7 @@ t_result	lex_next_token(
 	t_symbol	sym;
 	t_buffer	key;
 	t_size		get_or_put;
-	t_u32a		current_symbol;
+	t_size		current_symbol;
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;

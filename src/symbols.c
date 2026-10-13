@@ -2,7 +2,7 @@
 #include "diag.h"
 
 DIAG_FAM_INIT_BEGIN
-const t_soa_context	symbol_soa_ctx = (t_soa_context){
+const t_soa_context	symbol_soa_ctx = {
 	.fields_count = 1,
 	.max_alignment = alignof(t_symbol),
 	.total_struct_size = SYMBOL_SOA_SCOPE_SIZE,
