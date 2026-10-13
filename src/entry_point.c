@@ -112,7 +112,6 @@ void	xft_main(const t_any *__restrict__ const sp)
 
 	// <TIPO, ''|valor|tabla?)>\n
 
-	// @Jaime: for debugging
 	if (result == OK)
 	{
 		const t_token_type *__restrict__ const ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
