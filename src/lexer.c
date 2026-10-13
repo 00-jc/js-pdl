@@ -128,6 +128,7 @@ whitespace:
 			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
 			x = xft_from_le64(x);
 		#define TEST_FOR_KW(kw_name, le_value) tok.type = (t_u8)xft_tern(x == (le_value), (kw_name), tok.type);
+			// used: https://codeberg.org/00jc/repr
 			TEST_FOR_KW(TOK_TRUE,	0x65757274);
 			TEST_FOR_KW(TOK_FALSE,	0x65736C6166);
 			TEST_FOR_KW(TOK_LET,	0x74656C);
