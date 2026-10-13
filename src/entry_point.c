@@ -42,14 +42,6 @@ void	xft_main(const t_any *__restrict__ const sp)
 	src_buf = xft_map_file(ptrs.argv[1], O_RDONLY);
 	if (__builtin_expect(src_buf.mem == nullptr, 0))
 	{
-		t_stat	st;
-
-		// mmap of a 0-byte file fails, but an empty program is valid
-		if (xft_stat((t_any)ptrs.argv[1], &st) == 0 && st.st_size == 0)
-		{
-			xft_gpa_destroy(&gpa);
-			xft_exit(0);
-		}
 		xft_writer_write(&_stderr, xft_fatptr((t_any)CANNOT_MAP_FILE, sizeof(CANNOT_MAP_FILE) - 1));
 		xft_gpa_destroy(&gpa);
 		xft_writer_flush(&_stderr);
