@@ -27,6 +27,30 @@ const t_soa_context	token_soa_ctx = {
 };
 DIAG_FAM_INIT_END
 
+__attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
+static inline t_u64a		interpret_numeral(const t_u8 *__restrict__ const mem, t_u32a len)
+{
+	t_u64a	value;
+	t_size	it;
+
+	value = 0;
+	it = 0;
+	while (it < len) value = (value << 3) + (value << 1) + (mem[it++] - '0');
+	return value;
+}
+
+__attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
+static inline t_f64a		interpret_decimal_part(const t_u8 *__restrict__ const mem, t_u32a len)
+{
+	t_f64a	value;
+	t_size	it;
+
+	value = 0;
+	it = len;
+	while (it > 0) value = (value + (mem[--it] - '0')) / 10;
+	return value;
+}
+
 __attribute__((noinline, __nonnull__(4, 5, 6)))
 t_result	lex_next_token(
 	t_allocator							allocator,
@@ -51,6 +75,7 @@ t_result	lex_next_token(
 		['}']				= &&single_char_token,
 		['-']				= &&single_char_token,
 		['*']				= &&single_char_token,
+		['%']				= &&single_char_token,
 
 		['|']				= &&double_op_or_error,
 		['&']				= &&double_op_or_error,
@@ -65,6 +90,7 @@ t_result	lex_next_token(
 		['a' ... 'z']		= &&identifier,
 		['A' ... 'Z']		= &&identifier,
 		['_']				= &&identifier,
+		[0x80 ... UINT8_MAX]= &&identifier,
 		['0' ... '9']		= &&numeric_constant,
 		['"']				= &&string_literal,
 	};
@@ -77,11 +103,13 @@ t_result	lex_next_token(
 	t_u32a		line;
 
 whitespace:
+	tok.type			= TOK_EOF;
+	tok.as.value.i		= 0;
+	tok.symbol			= 0;
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
 	if (xft_isspace(dispatched)) goto whitespace;
 
-	tok.type			= TOK_EOF;
 	tok.as.lexeme.start = state->offset - 1;
 
 	DIAG_GOTO(states[dispatched]);
@@ -91,7 +119,7 @@ whitespace:
 		tok.type = TOK_IDENTIFIER;
 		while (state->offset < src.size && (xft_isalpha(src.mem[state->offset]) | xft_isdigit(src.mem[state->offset]) | (src.mem[state->offset] == '_') | (src.mem[state->offset] >= 0x80)))
 			++state->offset;
-		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto indent_too_big;
+		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		goto success;
 	}
@@ -106,23 +134,25 @@ whitespace:
 			++state->offset;
 			goto float_constant;
 		}
-		// TODO: atoi
-		tok.as.lexeme.end = state->offset;
-		tok.as.value = 0;
+		tok.as.value.i = interpret_numeral(src.mem + tok.as.lexeme.start, state->offset - tok.as.lexeme.start);
 		goto success;
 	}
 
 	float_constant:
 	{
-		[[maybe_unused]] t_u32a real_part_start = tok.as.lexeme.start;
-		[[maybe_unused]] t_u32a real_part_end = state->offset - 1;
-		[[maybe_unused]] t_u32a decimal_start = state->offset;
+		t_u32a real_part_start = tok.as.lexeme.start;
+		t_u32a real_part_end = state->offset - 1;
+		t_u32a decimal_start = state->offset;
 		tok.type = TOK_CONST_FLOAT;
+
 		while (state->offset < src.size && xft_isdigit(src.mem[state->offset]))
 			++state->offset;
-		// TODO: atof
-		tok.as.lexeme.end = state->offset;
-		tok.as.value = 0;
+
+		if (__builtin_expect(decimal_start == state->offset, 0)) goto float_follow_dot_error;
+
+		t_u64a lhs = interpret_numeral(src.mem + real_part_start, real_part_end - real_part_start);
+		t_f64a rhs = interpret_decimal_part(src.mem + decimal_start, state->offset - decimal_start);
+		tok.as.value.f = (t_f64a)lhs + rhs;
 		goto success;
 	}
 
@@ -134,20 +164,19 @@ whitespace:
 		{
 			strlit_loop:
 			if (__builtin_expect(state->offset >= src.size, 0)) goto error_unterminated_string;
-			if (state->offset < src.size && src.mem[state->offset] == '\\')
+			switch (src.mem[state->offset])
 			{
-				state->offset += 2;
-				goto strlit_loop;
+				case '\\':
+					state->offset += 2;
+					goto strlit_loop;
+				case '"':
+					tok.as.lexeme.end = state->offset++;
+					if (__builtin_expect(tok.as.lexeme.end - tok.as.lexeme.start > 64, 0)) goto strlit_too_big;
+					goto success;
+				default:
+					++state->offset;
 			}
-			if (state->offset < src.size && src.mem[state->offset] == '"')
-			{
-				tok.as.lexeme.end = state->offset++;
-				break;
-			}
-			++state->offset;
 		}
-		if (__builtin_expect(state->offset - tok.as.lexeme.start > 64, 0)) goto strlit_too_big;
-		goto success;
 	}
 
 	possible_operator_followed_by_eq: // (+ | +=) (< | <=) (> | >=) (! | !=)
@@ -171,26 +200,48 @@ whitespace:
 	}
 	double_op_or_error:
 	{
-
+		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 1))
+		{
+			tok.type = dispatched;
+			tok.as.lexeme.end = ++state->offset;
+			goto success;
+		}
+		goto no_double_error;
 	}
 	div_or_comment:
 	{
-
+		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 1))
+		{
+			t_any ptr = xft_memchr(src.mem + state->offset, '\n', src.size - state->offset);
+			state->offset = (t_u32a)xft_tern(ptr != nullptr, (t_u32a)((t_uptr)ptr - (t_uptr)src.mem) + 1, src.size);
+			goto whitespace;
+		}
+		tok.type = TOK_DIV;
+		tok.as.lexeme.end = state->offset;
+		goto success;
 	}
+
 	success:
 		return (xft_soa_append_from_struct(allocator, soa, &tok, &token_soa_ctx));
 
 #define LEX_ERR_FMT(msg) "error in %s:%u:%u: " msg "\n"
 #define LEX_ERR(msg) xft_fatptr((t_any)LEX_ERR_FMT(msg), sizeof(LEX_ERR_FMT(msg)) - 1)
 
+	no_double_error:
+		fmt = LEX_ERR("&& and || have to appear as logical operators, no bit arithmetic is supported");
+		goto report_error;
 	error_unterminated_string:
+		--tok.as.lexeme.start;
 		fmt = LEX_ERR("unterminated string");
 		goto report_error;
-	indent_too_big:
+	ident_too_big:
 		fmt = LEX_ERR("identifier too big");
 		goto report_error;
 	strlit_too_big:
 		fmt = LEX_ERR("string literal too big");
+		goto report_error;
+	float_follow_dot_error:
+		fmt = LEX_ERR("expected digit after '.' in float constant");
 		goto report_error;
 	unexpected_char:
 		fmt = LEX_ERR("unrecognized char");

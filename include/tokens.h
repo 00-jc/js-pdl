@@ -2,11 +2,12 @@
 
 #include <xft.h>
 
-typedef enum e_token_type {
+typedef enum e_token_type : t_u8 {
 	TOK_EOF = '\0',
 
 	TOK_STRING_LITERAL,
 	TOK_BOOL,
+	TOK_BREAK,
 	TOK_DO,
 	TOK_ECHO,
 	TOK_FLOAT,
@@ -37,8 +38,8 @@ typedef enum e_token_type {
 	TOK_SUB = '-',
 	TOK_REM = '%',
 
-	TOK_AND,
-	TOK_OR,
+	TOK_AND	= '&',
+	TOK_OR	= '|',
 	TOK_BANG = '!',
 
 	TOK_LT		= '<',
@@ -63,7 +64,7 @@ typedef struct s_token
 			t_u32a	start;
 			t_u32a	end;
 		}	lexeme;
-		t_u64a value;
+		t_dp value;
 	} 				as;
 	t_u32a			symbol;
 }	t_token;
