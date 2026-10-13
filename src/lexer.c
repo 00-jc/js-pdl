@@ -121,6 +121,31 @@ whitespace:
 			++state->offset;
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
+		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
+		if (size <= 8)
+		{
+			t_u64a x = 0;
+			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
+			x = xft_from_le64(x);
+		#define TEST_FOR_KW(kw_name, le_value) tok.type = (t_u8)xft_tern(x == (le_value), (kw_name), tok.type);
+			TEST_FOR_KW(TOK_TRUE,	0x65757274);
+			TEST_FOR_KW(TOK_FALSE,	0x65736C6166);
+			TEST_FOR_KW(TOK_LET,	0x74656C);
+			TEST_FOR_KW(TOK_INT,	0x746E69);
+			TEST_FOR_KW(TOK_FLOAT,	0x74616F6C66);
+			TEST_FOR_KW(TOK_BOOL,	0x6E61656C6F6F62);
+			TEST_FOR_KW(TOK_STRING,	0x676E69727473);
+			TEST_FOR_KW(TOK_VOID,	0x64696F76);
+			TEST_FOR_KW(TOK_RETURN,	0x6E7275746572);
+			TEST_FOR_KW(TOK_IF,		0x6669);
+			TEST_FOR_KW(TOK_DO,		0x6F64);
+			TEST_FOR_KW(TOK_WHILE,	0x656C696877);
+			TEST_FOR_KW(TOK_BREAK,	0x6B61657262);
+			TEST_FOR_KW(TOK_FUNC,	0x6E6F6974636E7566);
+			TEST_FOR_KW(TOK_PROMPT,	0x74706D6F7270);
+			TEST_FOR_KW(TOK_ECHO,	0x6F686365);
+		#undef TEST_FOR_KW
+		}
 		goto success;
 	}
 	
