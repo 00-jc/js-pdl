@@ -5,8 +5,9 @@
 #include "errors.h"
 
 typedef struct s_lexer_state {
-	t_u32a	offset;
-	t_map	*__restrict__ symbols;
+	t_u32a						offset;
+	t_indexmap	*__restrict__	symbol_table;
+	t_soa	*__restrict__		symbol_dense_array;
 } t_lexer_state;
 
 t_result	lex_next_token(

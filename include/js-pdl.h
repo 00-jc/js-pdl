@@ -3,6 +3,7 @@
 #include "tokens.h"
 #include "errors.h"
 #include "lexer.h"
+#include "symbols.h"
 
 #define USAGE "usage: <exe> <file.js>\n"
 #define ALLOC_INIT_OOM "Cannot initialize allocator, most likely OOM\n"

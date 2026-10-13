@@ -14,10 +14,11 @@ void	xft_main(const t_any *__restrict__ const sp)
 	t_allocator		allocator;
 	t_buffer		src_buf;
 	t_soa			tokens_soa;
+	t_soa			symbols_soa;
 	t_lexer_state	lexer_state;
 	t_buffer		filename;
 	t_result		result;
-	t_map			symbols;
+	t_indexmap		symbols;
 
 	ptrs = xft_get_kernel_ptrs(sp);
 	_stderr = xft_get_fs_writer(xft_fatptr(_stderr_buffer, 1024), xft_get_stderr());
@@ -59,11 +60,23 @@ void	xft_main(const t_any *__restrict__ const sp)
 		xft_exit(1);
 	}
 
-	symbols = xft_new_map_with(allocator, 512);
-	if (__builtin_expect(symbols.buckets == nullptr, 0))
+	symbols_soa = xft_new_soa(allocator, 1024, &symbol_soa_ctx);
+	if (__builtin_expect(symbols_soa.ptr == nullptr, 0))
+	{
+		xft_writer_write(&_stderr, xft_fatptr((t_any)TOKENS_SOA_OOM, sizeof(TOKENS_SOA_OOM) - 1));
+		xft_destroy_soa(allocator, &tokens_soa);
+		xft_gpa_destroy(&gpa);
+		xft_unmap_file(src_buf);
+		xft_writer_flush(&_stderr);
+		xft_exit(1);
+	}
+
+	symbols = xft_new_indexmap_with(allocator, 1024);
+	if (__builtin_expect(symbols.soa.ptr == nullptr, 0))
 	{
 		xft_writer_write(&_stderr, xft_fatptr((t_any)LINES_OOM, sizeof(LINES_OOM) - 1));
 		xft_destroy_soa(allocator, &tokens_soa);
+		xft_destroy_soa(allocator, &symbols_soa);
 		xft_gpa_destroy(&gpa);
 		xft_unmap_file(src_buf);
 		xft_writer_flush(&_stderr);
@@ -76,7 +89,8 @@ void	xft_main(const t_any *__restrict__ const sp)
 	{
 		xft_writer_write(&_stderr, xft_fatptr((t_any)LINES_OOM, sizeof(LINES_OOM) - 1));
 		xft_destroy_soa(allocator, &tokens_soa);
-		xft_map_destroy(allocator, &symbols);
+		xft_destroy_soa(allocator, &symbols_soa);
+		xft_indexmap_destroy(allocator, &symbols);
 		xft_gpa_destroy(&gpa);
 		xft_unmap_file(src_buf);
 		xft_writer_flush(&_stderr);
@@ -85,7 +99,8 @@ void	xft_main(const t_any *__restrict__ const sp)
 	lexer_state = (t_lexer_state)
 	{
 		.offset = 0,
-		.symbols = &symbols,
+		.symbol_dense_array = &symbols_soa,
+		.symbol_table = &symbols,
 	};
 	filename = xft_fatptr(ptrs.argv[1], xft_strlen((t_any)ptrs.argv[1]));
 	err_state.writer = &_stderr;
@@ -139,7 +154,8 @@ void	xft_main(const t_any *__restrict__ const sp)
 	xft_unmap_file(src_buf);
 	xft_vec_destroy(allocator, &err_state.line_offsets);
 	xft_destroy_soa(allocator, &tokens_soa);
-	xft_map_destroy(allocator, &symbols);
+	xft_destroy_soa(allocator, &symbols_soa);
+	xft_indexmap_destroy(allocator, &symbols);
 	xft_gpa_destroy(&gpa);
 	xft_writer_flush(&_stdout);
 	xft_writer_flush(&_stderr);

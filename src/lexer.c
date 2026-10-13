@@ -1,6 +1,7 @@
 #include <xft.h>
 #include "diag.h"
 #include "lexer.h"
+#include "symbols.h"
 
 DIAG_FAM_INIT_BEGIN
 const t_soa_context	token_soa_ctx = {
@@ -96,8 +97,10 @@ t_result	lex_next_token(
 	};
 	DIAG_JUMP_TABLE_END
 
+	t_symbol	sym;
 	t_buffer	key;
-	t_any		get_or_put;
+	t_size		get_or_put;
+	t_u32a		current_symbol;
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;
@@ -151,14 +154,21 @@ whitespace_scalar:
 		}
 		if (tok.type == TOK_IDENTIFIER)
 		{
+			current_symbol = state->symbol_dense_array->occupied_elements;
 			key = xft_fatptr(src.mem + tok.as.lexeme.start, size);
-			get_or_put = xft_map_lookup(state->symbols, key);
-			if (get_or_put == nullptr)
+			get_or_put = xft_indexmap_lookup(state->symbol_table, key);
+			if (__builtin_expect(get_or_put == INDEXMAP_NPOS, 0))
 			{
-				if (__builtin_expect(xft_map_insert(allocator, state->symbols, key, (t_any)(&src.mem + tok.as.lexeme.start)) == KO, 0))
-						return KO;
+				sym = (t_symbol){
+					.scope = 0,
+				};
+				if (__builtin_expect(xft_soa_append_from_struct(allocator, state->symbol_dense_array, &sym, &symbol_soa_ctx) == KO, 0))
+					return KO;
+				if (__builtin_expect(xft_indexmap_insert(allocator, state->symbol_table, key, current_symbol) == KO, 0))
+					return KO;
+				get_or_put = current_symbol;
 			}
-			tok.symbol = (t_size)xft_map_get_bucket_idx(state->symbols, key);
+			tok.symbol = get_or_put;
 		}
 		goto success;
 	}
