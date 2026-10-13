@@ -330,7 +330,7 @@ whitespace_scalar:
 	}
 	div_or_comment:
 	{
-		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 1))
+		if (state->offset < src.size && src.mem[state->offset] == dispatched)
 		{
 			t_any ptr = xft_memchr(src.mem + state->offset, '\n', src.size - state->offset);
 			state->offset = (t_u32a)xft_tern(ptr != nullptr, (t_u32a)((t_uptr)ptr - (t_uptr)src.mem) + 1, src.size);
