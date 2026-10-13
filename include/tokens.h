@@ -2,7 +2,13 @@
 
 #include <xft.h>
 
-typedef enum e_token_type : t_u8 {
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+# define BACKING_STORAGE_ENUM(t) : t
+#elif
+# define BACKING_STORAGE_ENUM(t)
+#endif
+
+typedef enum e_token_type BACKING_STORAGE_ENUM(t_u8) {
 	TOK_EOF = '\0',
 
 	TOK_STRING_LITERAL,
