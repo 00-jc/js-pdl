@@ -1,6 +1,5 @@
 #include <xft.h>
-
-#define USAGE "usage: <exe> <file.js>\n"
+#include "js-pdl.h"
 
 __attribute__((__nonnull__(1), noreturn))
 void	xft_main(const t_any *__restrict__ const sp)

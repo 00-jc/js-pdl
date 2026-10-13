@@ -65,11 +65,18 @@ typedef struct s_token
 		}	lexeme;
 		t_u64a value;
 	} 				as;
+	t_u32a			symbol;
 }	t_token;
 
+enum e_token_soa_field {
+	TOKEN_SOA_TYPE,
+	TOKEN_SOA_AS,
+	TOKEN_SOA_SYMBOL,
+	TOKEN_SOA_FIELDS_COUNT,
+};
 
-typedef struct s_lexer_state {
-	t_u32a offset;
-} t_lexer_state;
+#define TOKEN_SOA_TYPE_SIZE		sizeof(((t_token *)0)->type)
+#define TOKEN_SOA_AS_SIZE		sizeof(((t_token *)0)->as)
+#define TOKEN_SOA_SYMBOL_SIZE	sizeof(((t_token *)0)->symbol)
 
-t_result lex_next_token(t_allocator allocator, t_buffer src, t_lexer_state *__restrict__ const state, t_vec *__restrict__ const vec);
+extern const t_soa_context	token_soa_ctx;

@@ -1,10 +1,5 @@
 #pragma once
 
-/*
- * Silence warnings for GNU computed-goto dispatch tables, i.e.
- *   static const void *t[] = { [0 ... N] = &&a, ['x'] = &&b };
- * (range designators, labels-as-values, overriding initializers).
- */
 #if defined(__clang__)
 # define DIAG_JUMP_TABLE_BEGIN \
 	_Pragma("clang diagnostic push") \
@@ -25,8 +20,24 @@
 # define DIAG_JUMP_TABLE_END
 #endif
 
-/* Computed goto (`goto *expr;`) without the GNU-extension warning. */
 #define DIAG_GOTO(target) \
 	DIAG_JUMP_TABLE_BEGIN \
 	goto *(target); \
 	DIAG_JUMP_TABLE_END
+
+#if defined(__clang__)
+# define DIAG_FAM_INIT_BEGIN \
+	_Pragma("clang diagnostic push") \
+	_Pragma("clang diagnostic ignored \"-Wgnu-flexible-array-initializer\"")
+# define DIAG_FAM_INIT_END \
+	_Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+# define DIAG_FAM_INIT_BEGIN \
+	_Pragma("GCC diagnostic push") \
+	_Pragma("GCC diagnostic ignored \"-Wpedantic\"")
+# define DIAG_FAM_INIT_END \
+	_Pragma("GCC diagnostic pop")
+#else
+# define DIAG_FAM_INIT_BEGIN
+# define DIAG_FAM_INIT_END
+#endif

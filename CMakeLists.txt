@@ -14,6 +14,7 @@ add_executable(js-pdl)
 target_sources(js-pdl PRIVATE
     src/entry_point.c
     src/lexer.c
+    src/errors.c
 )
 
 target_include_directories(js-pdl PRIVATE include)
