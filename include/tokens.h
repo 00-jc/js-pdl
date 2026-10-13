@@ -13,7 +13,6 @@ typedef enum e_token_type BACKING_STORAGE_ENUM(t_u8) {
 
 	TOK_STRING_LITERAL,
 	TOK_BOOL,
-	TOK_BREAK,
 	TOK_DO,
 	TOK_ECHO,
 	TOK_FLOAT,
@@ -61,18 +60,21 @@ typedef enum e_token_type BACKING_STORAGE_ENUM(t_u8) {
 	TOK_FALSE,
 }	t_token_type;
 
+typedef union s_token_body_union
+{
+	struct
+	{
+		t_u32a	start;
+		t_u32a	end;
+	}	lexeme;
+	t_dp value;
+}	t_token_body_union;
+
 typedef struct s_token
 {
-	t_token_type	type;
-	union {
-		struct
-		{
-			t_u32a	start;
-			t_u32a	end;
-		}	lexeme;
-		t_dp value;
-	} 				as;
-	t_u32a			symbol;
+	t_token_type		type;
+	t_token_body_union 	as;
+	t_size				symbol;
 }	t_token;
 
 enum e_token_soa_field {
@@ -96,9 +98,8 @@ static inline t_buffer	token_type_to_string(t_token_type tokt)
 	switch (tokt)
 	{
 		case TOK_EOF:             return (TOKT_STR("EOF"));
-		case TOK_STRING_LITERAL:  return (TOKT_STR("STRING_LITERAL"));
+		case TOK_STRING_LITERAL:  return (TOKT_STR("STRINGLIT"));
 		case TOK_BOOL:            return (TOKT_STR("BOOL"));
-		case TOK_BREAK:           return (TOKT_STR("BREAK"));
 		case TOK_DO:              return (TOKT_STR("DO"));
 		case TOK_ECHO:            return (TOKT_STR("ECHO"));
 		case TOK_FLOAT:           return (TOKT_STR("FLOAT"));
@@ -111,8 +112,8 @@ static inline t_buffer	token_type_to_string(t_token_type tokt)
 		case TOK_STRING:          return (TOKT_STR("STRING"));
 		case TOK_VOID:            return (TOKT_STR("VOID"));
 		case TOK_WHILE:           return (TOKT_STR("WHILE"));
-		case TOK_CONST_FLOAT:     return (TOKT_STR("CONST_FLOAT"));
-		case TOK_CONST_INT:       return (TOKT_STR("CONST_INT"));
+		case TOK_CONST_FLOAT:     return (TOKT_STR("CONSTFLOAT"));
+		case TOK_CONST_INT:       return (TOKT_STR("CONSTINT"));
 		case TOK_IDENTIFIER:      return (TOKT_STR("IDENTIFIER"));
 		case TOK_EQ:              return (TOKT_STR("EQ"));
 		case TOK_COMMA:           return (TOKT_STR("COMMA"));

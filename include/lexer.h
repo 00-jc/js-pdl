@@ -5,7 +5,8 @@
 #include "errors.h"
 
 typedef struct s_lexer_state {
-	t_u32a offset;
+	t_u32a	offset;
+	t_map	*__restrict__ symbols;
 } t_lexer_state;
 
 t_result	lex_next_token(

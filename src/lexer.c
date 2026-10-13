@@ -96,6 +96,8 @@ t_result	lex_next_token(
 	};
 	DIAG_JUMP_TABLE_END
 
+	t_buffer	key;
+	t_any		get_or_put;
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;
@@ -142,11 +144,21 @@ whitespace_scalar:
 			TEST_FOR_KW(TOK_IF,		0x6669);
 			TEST_FOR_KW(TOK_DO,		0x6F64);
 			TEST_FOR_KW(TOK_WHILE,	0x656C696877);
-			TEST_FOR_KW(TOK_BREAK,	0x6B61657262);
 			TEST_FOR_KW(TOK_FUNC,	0x6E6F6974636E7566);
 			TEST_FOR_KW(TOK_PROMPT,	0x74706D6F7270);
 			TEST_FOR_KW(TOK_ECHO,	0x6F686365);
 		#undef TEST_FOR_KW
+		}
+		if (tok.type == TOK_IDENTIFIER)
+		{
+			key = xft_fatptr(src.mem + tok.as.lexeme.start, size);
+			get_or_put = xft_map_lookup(state->symbols, key);
+			if (get_or_put == nullptr)
+			{
+				if (__builtin_expect(xft_map_insert(allocator, state->symbols, key, (t_any)(&src.mem + tok.as.lexeme.start)) == KO, 0))
+						return KO;
+			}
+			tok.symbol = (t_size)xft_map_get_bucket_idx(state->symbols, key);
 		}
 		goto success;
 	}

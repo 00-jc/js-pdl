@@ -47,7 +47,6 @@ if
 
 do while
 
-break
 
 function
 
