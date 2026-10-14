@@ -20,6 +20,7 @@ t_result	error_state_fill_lines(t_allocator allocator, t_error_state *__restrict
 	return (OK);
 }
 
+__attribute__((__nonnull__((1))))
 t_u32a	line_of_token(const t_error_state *__restrict__ const state, t_u32a offset)
 {
 	const t_u32a	*arr;

@@ -7,6 +7,8 @@ set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "" FORCE)
 
+option(JSPDL_USE_SIMD "use the simd lexer" OFF)
+
 add_subdirectory(xft)
 
 add_executable(js-pdl)
@@ -17,6 +19,11 @@ target_sources(js-pdl PRIVATE
     src/symbols.c
     src/errors.c
 )
+
+if(JSPDL_USE_SIMD)
+    target_sources(js-pdl PRIVATE src/lexer_simd.c)
+    target_compile_definitions(js-pdl PRIVATE JSPDL_USE_SIMD)
+endif()
 
 target_include_directories(js-pdl PRIVATE include)
 
