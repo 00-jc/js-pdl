@@ -52,7 +52,7 @@ static inline t_f64a		interpret_decimal_part(const t_u8 *__restrict__ const mem,
 	return value;
 }
 
-__attribute__((noinline, __nonnull__(4, 5, 6)))
+__attribute__((noinline, __nonnull__(4, 5, 6), __hot__))
 t_result	lex_next_token(
 	t_allocator							allocator,
 	const t_buffer						src,
