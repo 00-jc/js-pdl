@@ -112,6 +112,12 @@ whitespace:
 	tok.as.value.i		= 0;
 	tok.symbol			= 0;
 whitespace_scalar:
+
+	{	// @Jaime: benched: -10% rt on hotloop clang, -8% hotloop gcc. (100 mu_s -> 90 mu_s stable)
+		xft_prefetch_read0(states + 0x21, (0x3F - 0x21) * sizeof(t_any));
+		xft_prefetch_read0(states + 0x16, (0x61 - 0x7F) * sizeof(t_any));
+	}
+
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
 	if (xft_isspace(dispatched)) goto whitespace_scalar;
@@ -128,28 +134,43 @@ whitespace_scalar:
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
-		if (size <= 8)
+		if (size - 2 <= 6)
 		{
+			#define KW_MAGIC 0x1fb2e0cfcf4095cbull
+			#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
+			// used: https://codeberg.org/00jc/repr
+			static const t_u64 kw_key_le[16] =
+			{
+				[0]  = 0x656C696877,         // while
+				[1]  = 0x6F686365,           // echo
+				[3]  = 0x74616F6C66,         // float
+				[4]  = 0x6669,               // if
+				[5]  = 0x65736C6166,         // false
+				[6]  = 0x74706D6F7270,       // prompt
+				[7]  = 0x6E61656C6F6F62,     // boolean
+				[8]  = 0x64696F76,           // void
+				[9]  = 0x6E7275746572,       // return
+				[10] = 0x676E69727473,       // string
+				[11] = 0x746E69,             // int
+				[12] = 0x65757274,           // true
+				[13] = 0x74656C,             // let
+				[14] = 0x6E6F6974636E7566,   // function
+				[15] = 0x6F64,               // do
+			};
+			static const t_u8 kw_type[16] =
+			{
+				[0]  = TOK_WHILE,  [1]  = TOK_ECHO,   [2] = TOK_IDENTIFIER, [3]  = TOK_FLOAT, [4] = TOK_IF,
+				[5]  = TOK_FALSE,  [6]  = TOK_PROMPT, [7] = TOK_BOOL,       [8]  = TOK_VOID,  [9] = TOK_RETURN,
+				[10] = TOK_STRING, [11] = TOK_INT,    [12] = TOK_TRUE,      [13] = TOK_LET,   [14] = TOK_FUNC,
+				[15] = TOK_DO,
+			};
 			t_u64a x = 0;
+			xft_prefetch_read0(kw_type, 16 * sizeof(t_u8));
+			xft_prefetch_read0(kw_key_le, 15 * sizeof(t_u64));
 			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
 			x = xft_from_le64(x);
-		#define TEST_FOR_KW(kw_name, le_value) tok.type = (t_u8)xft_tern(x == (le_value), (kw_name), tok.type);
-			TEST_FOR_KW(TOK_TRUE,	xft_to_le64(*(const t_u64 *__restrict__ const)"true\0\0\0\0"));
-			TEST_FOR_KW(TOK_FALSE,	xft_to_le64(*(const t_u64 *__restrict__ const)"false\0\0\0"));
-			TEST_FOR_KW(TOK_LET,	xft_to_le64(*(const t_u64 *__restrict__ const)"let\0\0\0\0\0"));
-			TEST_FOR_KW(TOK_INT,	xft_to_le64(*(const t_u64 *__restrict__ const)"int\0\0\0\0\0"));
-			TEST_FOR_KW(TOK_FLOAT,	xft_to_le64(*(const t_u64 *__restrict__ const)"float\0\0\0"));
-			TEST_FOR_KW(TOK_BOOL,	xft_to_le64(*(const t_u64 *__restrict__ const)"boolean\0"));
-			TEST_FOR_KW(TOK_STRING,	xft_to_le64(*(const t_u64 *__restrict__ const)"string\0\0"));
-			TEST_FOR_KW(TOK_VOID,	xft_to_le64(*(const t_u64 *__restrict__ const)"void\0\0\0\0"));
-			TEST_FOR_KW(TOK_RETURN,	xft_to_le64(*(const t_u64 *__restrict__ const)"return\0\0"));
-			TEST_FOR_KW(TOK_IF,		xft_to_le64(*(const t_u64 *__restrict__ const)"if\0\0\0\0\0\0"));
-			TEST_FOR_KW(TOK_DO,		xft_to_le64(*(const t_u64 *__restrict__ const)"do\0\0\0\0\0\0"));
-			TEST_FOR_KW(TOK_WHILE,	xft_to_le64(*(const t_u64 *__restrict__ const)"while\0\0\0"));
-			TEST_FOR_KW(TOK_FUNC,	xft_to_le64(*(const t_u64 *__restrict__ const)"function"));
-			TEST_FOR_KW(TOK_PROMPT,	xft_to_le64(*(const t_u64 *__restrict__ const)"prompt\0\0"));
-			TEST_FOR_KW(TOK_ECHO,	xft_to_le64(*(const t_u64 *__restrict__ const)"echo\0\0\0\0"));
-		#undef TEST_FOR_KW
+			t_u32a hash = KW_HASH(x);
+			tok.type = (t_token_type)xft_tern(kw_key_le[hash] == x, kw_type[hash], TOK_IDENTIFIER);
 		}
 		if (tok.type == TOK_IDENTIFIER)
 		{

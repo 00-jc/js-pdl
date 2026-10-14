@@ -129,6 +129,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 					xft_fmt_writer(&_stdout, xft_fatptr((t_any)"<%s, %q>\n", sizeof("<%s, %q>\n") - 1), (t_any)&args);
 					break;
 				case TOK_CONST_FLOAT:
+					// args is u64s, underneath fmt reinterprets again, safe
 					args[2] = tvalues[i].value.i;
 					xft_fmt_writer(&_stdout, xft_fatptr((t_any)"<%s, %f>\n", sizeof("<%s, %f>\n") - 1), (t_any)&args);
 					break;
