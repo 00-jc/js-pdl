@@ -144,7 +144,8 @@ whitespace_scalar:
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
-		if (size - 2 <= 6)
+		// (size >= 2 && size <= 8)
+		if (size - 2 < 7)
 		{
 			#define KW_MAGIC 0x1fb2e0cfcf4095cbull
 			#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
