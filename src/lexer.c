@@ -89,7 +89,6 @@ t_result	lex_next_token(
 
 		['/']				= &&div_or_comment,
 		['a' ... 'z']		= &&identifier,
-		['A' ... 'Z']		= &&identifier,
 		['_']				= &&identifier,
 		[0x80 ... UINT8_MAX]= &&identifier,
 		['0' ... '9']		= &&numeric_constant,
@@ -129,7 +128,12 @@ whitespace_scalar:
 	if (xft_isspace(dispatched)) goto whitespace_scalar;
 
 	tok.as.lexeme.start = state->offset - 1;
+	
+	// @Jaime: lowercase for all letters, since we prefetched that case and this expression
+	// is pure + branchless it can be pipelined properly, we can also remove the all &&identifier
+	// labels from ['A' ... 'Z'], making less states.
 
+	dispatched = (t_u8)xft_tern(dispatched - 'A' < 'Z' - 'A', dispatched | 0x20, dispatched);
 	DIAG_GOTO(states[dispatched]);
 
 	identifier: // [a-z][A-Z]_ | utf8
@@ -144,8 +148,14 @@ whitespace_scalar:
 		{
 			#define KW_MAGIC 0x1fb2e0cfcf4095cbull
 			#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
-			// used: https://codeberg.org/00jc/repr
-			static const t_u64 kw_key_le[16] =
+			#define KW_TYPE_START 16
+			// used: https://codeberg.org/00jc/repr (for the little endiand representation of the kws)
+			//
+			// mix the type table and the key tables,
+			// since it's just identifiers a relative load
+			// is cheaper and we can also bring it into L1
+			// with less hassle.
+			static const t_u64 kw_table[32] =
 			{
 				[0]  = 0x656C696877,         // while
 				[1]  = 0x6F686365,           // echo
@@ -162,21 +172,30 @@ whitespace_scalar:
 				[13] = 0x74656C,             // let
 				[14] = 0x6E6F6974636E7566,   // function
 				[15] = 0x6F64,               // do
-			};
-			static const t_u8 kw_type[16] =
-			{
-				[0]  = TOK_WHILE,  [1]  = TOK_ECHO,   [2] = TOK_IDENTIFIER, [3]  = TOK_FLOAT, [4] = TOK_IF,
-				[5]  = TOK_FALSE,  [6]  = TOK_PROMPT, [7] = TOK_BOOL,       [8]  = TOK_VOID,  [9] = TOK_RETURN,
-				[10] = TOK_STRING, [11] = TOK_INT,    [12] = TOK_TRUE,      [13] = TOK_LET,   [14] = TOK_FUNC,
-				[15] = TOK_DO,
+
+				[KW_TYPE_START + 0]  = TOK_WHILE,
+				[KW_TYPE_START + 1]  = TOK_ECHO,
+				[KW_TYPE_START + 2]  = TOK_IDENTIFIER,
+				[KW_TYPE_START + 3]  = TOK_FLOAT,
+				[KW_TYPE_START + 4]  = TOK_IF,
+				[KW_TYPE_START + 5]  = TOK_FALSE,
+				[KW_TYPE_START + 6]  = TOK_PROMPT,
+				[KW_TYPE_START + 7]  = TOK_BOOL,
+				[KW_TYPE_START + 8]  = TOK_VOID,
+				[KW_TYPE_START + 9]  = TOK_RETURN,
+				[KW_TYPE_START + 10] = TOK_STRING,
+				[KW_TYPE_START + 11] = TOK_INT,
+				[KW_TYPE_START + 12] = TOK_TRUE,
+				[KW_TYPE_START + 13] = TOK_LET,
+				[KW_TYPE_START + 14] = TOK_FUNC,
+				[KW_TYPE_START + 15] = TOK_DO,
 			};
 			t_u64a x = 0;
-			xft_prefetch_read0(kw_type, 16 * sizeof(t_u8));
-			xft_prefetch_read0(kw_key_le, 15 * sizeof(t_u64));
+			xft_prefetch_read0(kw_table, (KW_TYPE_START + 15) * sizeof(t_u64));
 			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
 			x = xft_from_le64(x);
 			t_u32a hash = KW_HASH(x);
-			tok.type = (t_token_type)xft_tern(kw_key_le[hash] == x, kw_type[hash], TOK_IDENTIFIER);
+			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
 		}
 		if (tok.type == TOK_IDENTIFIER)
 		{
