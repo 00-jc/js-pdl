@@ -113,9 +113,15 @@ whitespace:
 	tok.symbol			= 0;
 whitespace_scalar:
 
-	{	// @Jaime: benched: -10% rt on hotloop clang, -8% hotloop gcc. (100 mu_s -> 90 mu_s stable)
-		xft_prefetch_read0(states + 0x21, (0x3F - 0x21) * sizeof(t_any)); // ! , ; " 0123456789 ? 
-		xft_prefetch_read0(states + 0x16, (0x7F - 0x61) * sizeof(t_any)); // a-z { | }
+	{	// @Jaime: benched: -10% rt on hotloop clang, -8% hotloop gcc. (100 us -> 90 us stable)
+		//
+		// min-non-prefetch: 80 us
+		// min-prefetch: 50 us
+		//
+		// @Why: optimize for hot cases (do not pull &&unexpected labels into cache upfront)
+		xft_prefetch_read0(states + 0x21, (0x3E - 0x21) * sizeof(t_any));	// ! , ; " 0123456789 <=>
+		xft_prefetch_read0(states + 0x16, (0x7F - 0x61) * sizeof(t_any));	// a-z { | }
+		xft_prefetch_read0(src.mem + state->offset, 64 + 8);				// 64 = max len for ids / strings + 8 for possible spaces
 	}
 
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
