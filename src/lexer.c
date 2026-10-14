@@ -62,7 +62,7 @@ t_result	lex_next_token(
 	t_error_state	*__restrict__ const	error_state
 )
 {
-	
+
 	DIAG_JUMP_TABLE_BEGIN
 	static const t_any states[] = {
 		[0 ... UINT8_MAX]	= &&unexpected_char,
@@ -95,6 +95,53 @@ t_result	lex_next_token(
 		['"']				= &&string_literal,
 	};
 	DIAG_JUMP_TABLE_END
+
+
+	#define KW_MAGIC 0x1fb2e0cfcf4095cbull
+	#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
+	#define KW_TYPE_START 16
+	// used: https://codeberg.org/00jc/repr (for the little endiand representation of the kws)
+	//
+	// mix the type table and the key tables,
+	// since it's just identifiers a relative load
+	// is cheaper and we can also bring it into L1
+	// with less hassle.
+	static const t_u64 kw_table[32] =
+	{
+		[0]  = 0x656C696877,         // while
+		[1]  = 0x6F686365,           // echo
+		[3]  = 0x74616F6C66,         // float
+		[4]  = 0x6669,               // if
+		[5]  = 0x65736C6166,         // false
+		[6]  = 0x74706D6F7270,       // prompt
+		[7]  = 0x6E61656C6F6F62,     // boolean
+		[8]  = 0x64696F76,           // void
+		[9]  = 0x6E7275746572,       // return
+		[10] = 0x676E69727473,       // string
+		[11] = 0x746E69,             // int
+		[12] = 0x65757274,           // true
+		[13] = 0x74656C,             // let
+		[14] = 0x6E6F6974636E7566,   // function
+		[15] = 0x6F64,               // do
+
+		[KW_TYPE_START + 0]  = TOK_WHILE,
+		[KW_TYPE_START + 1]  = TOK_ECHO,
+		[KW_TYPE_START + 2]  = TOK_IDENTIFIER,
+		[KW_TYPE_START + 3]  = TOK_FLOAT,
+		[KW_TYPE_START + 4]  = TOK_IF,
+		[KW_TYPE_START + 5]  = TOK_FALSE,
+		[KW_TYPE_START + 6]  = TOK_PROMPT,
+		[KW_TYPE_START + 7]  = TOK_BOOL,
+		[KW_TYPE_START + 8]  = TOK_VOID,
+		[KW_TYPE_START + 9]  = TOK_RETURN,
+		[KW_TYPE_START + 10] = TOK_STRING,
+		[KW_TYPE_START + 11] = TOK_INT,
+		[KW_TYPE_START + 12] = TOK_TRUE,
+		[KW_TYPE_START + 13] = TOK_LET,
+		[KW_TYPE_START + 14] = TOK_FUNC,
+		[KW_TYPE_START + 15] = TOK_DO,
+	};
+
 
 	t_symbol	sym;
 	t_buffer	key;
@@ -147,53 +194,45 @@ whitespace_scalar:
 		// (size >= 2 && size <= 8)
 		if (size - 2 < 7)
 		{
-			#define KW_MAGIC 0x1fb2e0cfcf4095cbull
-			#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
-			#define KW_TYPE_START 16
-			// used: https://codeberg.org/00jc/repr (for the little endiand representation of the kws)
-			//
-			// mix the type table and the key tables,
-			// since it's just identifiers a relative load
-			// is cheaper and we can also bring it into L1
-			// with less hassle.
-			static const t_u64 kw_table[32] =
-			{
-				[0]  = 0x656C696877,         // while
-				[1]  = 0x6F686365,           // echo
-				[3]  = 0x74616F6C66,         // float
-				[4]  = 0x6669,               // if
-				[5]  = 0x65736C6166,         // false
-				[6]  = 0x74706D6F7270,       // prompt
-				[7]  = 0x6E61656C6F6F62,     // boolean
-				[8]  = 0x64696F76,           // void
-				[9]  = 0x6E7275746572,       // return
-				[10] = 0x676E69727473,       // string
-				[11] = 0x746E69,             // int
-				[12] = 0x65757274,           // true
-				[13] = 0x74656C,             // let
-				[14] = 0x6E6F6974636E7566,   // function
-				[15] = 0x6F64,               // do
-
-				[KW_TYPE_START + 0]  = TOK_WHILE,
-				[KW_TYPE_START + 1]  = TOK_ECHO,
-				[KW_TYPE_START + 2]  = TOK_IDENTIFIER,
-				[KW_TYPE_START + 3]  = TOK_FLOAT,
-				[KW_TYPE_START + 4]  = TOK_IF,
-				[KW_TYPE_START + 5]  = TOK_FALSE,
-				[KW_TYPE_START + 6]  = TOK_PROMPT,
-				[KW_TYPE_START + 7]  = TOK_BOOL,
-				[KW_TYPE_START + 8]  = TOK_VOID,
-				[KW_TYPE_START + 9]  = TOK_RETURN,
-				[KW_TYPE_START + 10] = TOK_STRING,
-				[KW_TYPE_START + 11] = TOK_INT,
-				[KW_TYPE_START + 12] = TOK_TRUE,
-				[KW_TYPE_START + 13] = TOK_LET,
-				[KW_TYPE_START + 14] = TOK_FUNC,
-				[KW_TYPE_START + 15] = TOK_DO,
-			};
 			t_u64a x = 0;
+			t_u8 __attribute__	((uninitialized))	i[6];
+			t_u8 __attribute__	((uninitialized))	s[6];
+
 			xft_prefetch_read0(kw_table, (KW_TYPE_START + 15) * sizeof(t_u64));
-			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
+
+			// variant of: https://codeberg.org/00jc/xft/src/branch/main/src/mem/arch/xft_memcpy.c
+			//
+			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
+			// so i'll do it myself.
+			//
+			// invariant, first 2 bytes get always copied since size _has to_ be >= 2 to get in this
+			// branch.
+	
+			i[0] = -(2ULL < size) & 2;
+			i[1] = -(3ULL < size) & 3;
+			i[2] = -(4ULL < size) & 4;
+			i[3] = -(5ULL < size) & 5;
+			i[4] = -(6ULL < size) & 6;
+			i[5] = -(7ULL < size) & 7;
+			s[0] = ((t_blk8r)src.mem + state->offset)[i[2]];
+			s[1] = ((t_blk8r)src.mem + state->offset)[i[3]];
+			s[2] = ((t_blk8r)src.mem + state->offset)[i[4]];
+			s[3] = ((t_blk8r)src.mem + state->offset)[i[5]];
+			s[4] = ((t_blk8r)src.mem + state->offset)[i[6]];
+			s[5] = ((t_blk8r)src.mem + state->offset)[i[7]];
+			x |= ((t_blk8r)src.mem + state->offset)[0];
+			x |= ((t_blk8r)src.mem + state->offset)[1] << 8;
+			x |= s[0] << (i[0] << 3);
+			x |= s[1] << (i[1] << 3);
+			x |= s[2] << (i[2] << 3);
+			x |= s[3] << (i[3] << 3);
+			x |= s[4] << (i[4] << 3);
+			x |= s[5] << (i[5] << 3);
+
+			// @Jaime: since the copies mightve repeated chars we mask it out
+			// to make sure we don't mess up the identifier.
+
+			x &= (1ULL << size) - 1;
 			x = xft_from_le64(x);
 			t_u32a hash = KW_HASH(x);
 			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
