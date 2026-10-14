@@ -83,19 +83,8 @@ void	xft_main(const t_any *__restrict__ const sp)
 		xft_exit(1);
 	}
 
-	err_state.line_offsets = xft_new_vec(allocator, 64, sizeof(t_u32a));
-	if (__builtin_expect(err_state.line_offsets.buf.mem == nullptr
-		|| error_state_fill_lines(allocator, &err_state, src_buf) == KO, 0))
-	{
-		xft_writer_write(&_stderr, xft_fatptr((t_any)LINES_OOM, sizeof(LINES_OOM) - 1));
-		xft_destroy_soa(allocator, &tokens_soa);
-		xft_destroy_soa(allocator, &symbols_soa);
-		xft_indexmap_destroy(allocator, &symbols);
-		xft_gpa_destroy(&gpa);
-		xft_unmap_file(src_buf);
-		xft_writer_flush(&_stderr);
-		xft_exit(1);
-	}
+	err_state.is_init = false;
+	err_state.writer = &_stderr;
 	lexer_state = (t_lexer_state)
 	{
 		.offset = 0,
@@ -103,7 +92,6 @@ void	xft_main(const t_any *__restrict__ const sp)
 		.symbol_table = &symbols,
 	};
 	filename = xft_fatptr(ptrs.argv[1], xft_strlen((t_any)ptrs.argv[1]));
-	err_state.writer = &_stderr;
 	while ((result = lex_next_token(allocator, src_buf, filename, &lexer_state, &tokens_soa, &err_state)) == OK)
 	{
 		const t_token_type *__restrict__ const ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, 0);
@@ -151,7 +139,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 	}
 
 	xft_unmap_file(src_buf);
-	xft_vec_destroy(allocator, &err_state.line_offsets);
+	if (err_state.is_init) xft_vec_destroy(allocator, &err_state.line_offsets);
 	xft_destroy_soa(allocator, &tokens_soa);
 	xft_destroy_soa(allocator, &symbols_soa);
 	xft_indexmap_destroy(allocator, &symbols);

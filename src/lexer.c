@@ -134,22 +134,21 @@ whitespace_scalar:
 			xft_memcpy(&x, src.mem + tok.as.lexeme.start, size);
 			x = xft_from_le64(x);
 		#define TEST_FOR_KW(kw_name, le_value) tok.type = (t_u8)xft_tern(x == (le_value), (kw_name), tok.type);
-			// used: https://codeberg.org/00jc/repr
-			TEST_FOR_KW(TOK_TRUE,	0x65757274);
-			TEST_FOR_KW(TOK_FALSE,	0x65736C6166);
-			TEST_FOR_KW(TOK_LET,	0x74656C);
-			TEST_FOR_KW(TOK_INT,	0x746E69);
-			TEST_FOR_KW(TOK_FLOAT,	0x74616F6C66);
-			TEST_FOR_KW(TOK_BOOL,	0x6E61656C6F6F62);
-			TEST_FOR_KW(TOK_STRING,	0x676E69727473);
-			TEST_FOR_KW(TOK_VOID,	0x64696F76);
-			TEST_FOR_KW(TOK_RETURN,	0x6E7275746572);
-			TEST_FOR_KW(TOK_IF,		0x6669);
-			TEST_FOR_KW(TOK_DO,		0x6F64);
-			TEST_FOR_KW(TOK_WHILE,	0x656C696877);
-			TEST_FOR_KW(TOK_FUNC,	0x6E6F6974636E7566);
-			TEST_FOR_KW(TOK_PROMPT,	0x74706D6F7270);
-			TEST_FOR_KW(TOK_ECHO,	0x6F686365);
+			TEST_FOR_KW(TOK_TRUE,	xft_to_le64(*(const t_u64 *__restrict__ const)"true\0\0\0\0"));
+			TEST_FOR_KW(TOK_FALSE,	xft_to_le64(*(const t_u64 *__restrict__ const)"false\0\0\0"));
+			TEST_FOR_KW(TOK_LET,	xft_to_le64(*(const t_u64 *__restrict__ const)"let\0\0\0\0\0"));
+			TEST_FOR_KW(TOK_INT,	xft_to_le64(*(const t_u64 *__restrict__ const)"int\0\0\0\0\0"));
+			TEST_FOR_KW(TOK_FLOAT,	xft_to_le64(*(const t_u64 *__restrict__ const)"float\0\0\0"));
+			TEST_FOR_KW(TOK_BOOL,	xft_to_le64(*(const t_u64 *__restrict__ const)"boolean\0"));
+			TEST_FOR_KW(TOK_STRING,	xft_to_le64(*(const t_u64 *__restrict__ const)"string\0\0"));
+			TEST_FOR_KW(TOK_VOID,	xft_to_le64(*(const t_u64 *__restrict__ const)"void\0\0\0\0"));
+			TEST_FOR_KW(TOK_RETURN,	xft_to_le64(*(const t_u64 *__restrict__ const)"return\0\0"));
+			TEST_FOR_KW(TOK_IF,		xft_to_le64(*(const t_u64 *__restrict__ const)"if\0\0\0\0\0\0"));
+			TEST_FOR_KW(TOK_DO,		xft_to_le64(*(const t_u64 *__restrict__ const)"do\0\0\0\0\0\0"));
+			TEST_FOR_KW(TOK_WHILE,	xft_to_le64(*(const t_u64 *__restrict__ const)"while\0\0\0"));
+			TEST_FOR_KW(TOK_FUNC,	xft_to_le64(*(const t_u64 *__restrict__ const)"function"));
+			TEST_FOR_KW(TOK_PROMPT,	xft_to_le64(*(const t_u64 *__restrict__ const)"prompt\0\0"));
+			TEST_FOR_KW(TOK_ECHO,	xft_to_le64(*(const t_u64 *__restrict__ const)"echo\0\0\0\0"));
 		#undef TEST_FOR_KW
 		}
 		if (tok.type == TOK_IDENTIFIER)
@@ -301,7 +300,8 @@ whitespace_scalar:
 #undef LEX_ERR_FMT
 
 	report_error:
-		line = line_of_token(error_state, tok.as.lexeme.start);
+		if (__builtin_expect(line_of_token_lazy_init(allocator, error_state, tok.as.lexeme.start, &line, src) == KO, 0))
+			return (KO);
 		args[0] = (t_u64)(t_uptr)file_name.mem;
 		args[1] = file_name.size;
 		args[2] = line;

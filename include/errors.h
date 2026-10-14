@@ -9,13 +9,10 @@ typedef struct s_error_state
 	t_writer	*__restrict__ writer;
 }	t_error_state;
 
-t_result	error_state_fill_lines(
+t_result	line_of_token_lazy_init(
 	t_allocator							allocator,
 	t_error_state	*__restrict__ const	state,
-	const t_buffer						src
-) __attribute__((__nonnull__(2)));
-
-t_u32a		line_of_token(
-	const t_error_state	*__restrict__ const	state,
-	t_u32a									offset
-) __attribute__((__nonnull__(1)));
+	t_u32a								offset,
+	t_u32a			*__restrict__ const	line_of_token,
+	t_buffer							src
+) __attribute__((__nonnull__(2, 4)));
