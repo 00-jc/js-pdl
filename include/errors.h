@@ -4,6 +4,7 @@
 
 typedef struct s_error_state
 {
+	bool		is_init;
 	t_vec		line_offsets;
 	t_writer	*__restrict__ writer;
 }	t_error_state;
