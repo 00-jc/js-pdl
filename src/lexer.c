@@ -153,6 +153,8 @@ t_result	lex_next_token(
 	t_u64		args[4];
 	t_u32a		line;
 
+	if (src.mem == nullptr) __builtin_unreachable();
+
 whitespace:
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
@@ -191,11 +193,9 @@ whitespace_scalar:
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
-		// (size >= 2 && size <= 8)
-		if (size - 2 < 7)
+		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
 			t_u64a x = 0;
-			t_u8 __attribute__	((uninitialized))	i[6];
 			t_u8 __attribute__	((uninitialized))	s[6];
 
 			xft_prefetch_read0(kw_table, (KW_TYPE_START + 15) * sizeof(t_u64));
@@ -207,32 +207,27 @@ whitespace_scalar:
 			//
 			// invariant, first 2 bytes get always copied since size _has to_ be >= 2 to get in this
 			// branch.
-	
-			i[0] = -(2ULL < size) & 2;
-			i[1] = -(3ULL < size) & 3;
-			i[2] = -(4ULL < size) & 4;
-			i[3] = -(5ULL < size) & 5;
-			i[4] = -(6ULL < size) & 6;
-			i[5] = -(7ULL < size) & 7;
-			s[0] = ((t_blk8r)src.mem + state->offset)[i[2]];
-			s[1] = ((t_blk8r)src.mem + state->offset)[i[3]];
-			s[2] = ((t_blk8r)src.mem + state->offset)[i[4]];
-			s[3] = ((t_blk8r)src.mem + state->offset)[i[5]];
-			s[4] = ((t_blk8r)src.mem + state->offset)[i[6]];
-			s[5] = ((t_blk8r)src.mem + state->offset)[i[7]];
-			x |= ((t_blk8r)src.mem + state->offset)[0];
-			x |= ((t_blk8r)src.mem + state->offset)[1] << 8;
-			x |= s[0] << (i[0] << 3);
-			x |= s[1] << (i[1] << 3);
-			x |= s[2] << (i[2] << 3);
-			x |= s[3] << (i[3] << 3);
-			x |= s[4] << (i[4] << 3);
-			x |= s[5] << (i[5] << 3);
 
-			// @Jaime: since the copies mightve repeated chars we mask it out
-			// to make sure we don't mess up the identifier.
+			typedef t_u8  __attribute__((__vector_size__(8))) t_8bytev;
 
-			x &= (1ULL << size) - 1;
+			constexpr t_8bytev iota = (t_8bytev){0, 1, 2, 3, 4, 5, 6, 7};
+			const t_8bytev i = (t_8bytev)((iota < ((t_8bytev){} + (t_u8)size)) & iota);
+			const t_blk8r ptr = (t_blk8r)src.mem + tok.as.lexeme.start;
+			if (ptr == nullptr) __builtin_unreachable();
+
+			x = *(const t_u16 *__restrict__ const)ptr;
+			s[0] = (ptr)[i[2]];
+			s[1] = (ptr)[i[3]];
+			s[2] = (ptr)[i[4]];
+			s[3] = (ptr)[i[5]];
+			s[4] = (ptr)[i[6]];
+			s[5] = (ptr)[i[7]];
+			x |= (t_u64)s[0] << (i[2] << 3);
+			x |= (t_u64)s[1] << (i[3] << 3);
+			x |= (t_u64)s[2] << (i[4] << 3);
+			x |= (t_u64)s[3] << (i[5] << 3);
+			x |= (t_u64)s[4] << (i[6] << 3);
+			x |= (t_u64)s[5] << (i[7] << 3);
 			x = xft_from_le64(x);
 			t_u32a hash = KW_HASH(x);
 			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
@@ -345,7 +340,7 @@ whitespace_scalar:
 	}
 	div_or_comment:
 	{
-		if (state->offset < src.size && src.mem[state->offset] == dispatched)
+		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 0))
 		{
 			t_any ptr = xft_memchr(src.mem + state->offset, '\n', src.size - state->offset);
 			state->offset = (t_u32a)xft_tern(ptr != nullptr, (t_u32a)((t_uptr)ptr - (t_uptr)src.mem) + 1, src.size);
