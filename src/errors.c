@@ -1,6 +1,6 @@
 #include "errors.h"
 
-__attribute__((__nonnull__(2), __flatten__, __unused__, __always_inline__))
+__attribute__((__cold__, __nonnull__(2), __flatten__, __unused__, __always_inline__))
 inline t_result	lazy_error_state_fill_lines(t_allocator allocator, t_error_state *__restrict__ const state, const t_buffer src)
 {
 	t_u32a		scan;
@@ -25,7 +25,7 @@ inline t_result	lazy_error_state_fill_lines(t_allocator allocator, t_error_state
 	return (OK);
 }
 
-__attribute__((__nonnull__(2, 4)))
+__attribute__((__nonnull__(2, 4), __cold__, noinline))
 t_result	line_of_token_lazy_init(
 		t_allocator								allocator,
 		t_error_state *__restrict__ const		state,
