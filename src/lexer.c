@@ -195,39 +195,28 @@ whitespace_scalar:
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
 		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
-			t_u64a x = 0;
-			t_u8 __attribute__	((uninitialized))	s[6];
-
 			xft_prefetch_read0(kw_table, (KW_TYPE_START + 15) * sizeof(t_u64));
 
-			// variant of: https://codeberg.org/00jc/xft/src/branch/main/src/mem/arch/xft_memcpy.c
-			//
 			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
-			// so i'll do it myself.
+			// so i'll do a overlap load myself.
 			//
 			// invariant, first 2 bytes get always copied since size _has to_ be >= 2 to get in this
 			// branch.
 
-			typedef t_u8  __attribute__((__vector_size__(8))) t_8bytev;
+			t_u64 x = 0;
+			t_u64 z = 0;
 
-			constexpr t_8bytev iota = (t_8bytev){0, 1, 2, 3, 4, 5, 6, 7};
-			const t_8bytev i = (t_8bytev)((iota < ((t_8bytev){} + (t_u8)size)) & iota);
-			const t_blk8r ptr = (t_blk8r)src.mem + tok.as.lexeme.start;
-			if (ptr == nullptr) __builtin_unreachable();
+			const t_blk8r	ptr		= src.mem + tok.as.lexeme.start;
+			const t_blk8r	base	= (t_any)xft_tern(4 < size, (t_uptr)src.mem + tok.as.lexeme.start, (t_uptr)&z);
+			const t_u8		offset	= (t_u8)xft_tern(4 < size, size - 4, 0); 
 
-			x = *(const t_u16 *__restrict__ const)ptr;
-			s[0] = (ptr)[i[2]];
-			s[1] = (ptr)[i[3]];
-			s[2] = (ptr)[i[4]];
-			s[3] = (ptr)[i[5]];
-			s[4] = (ptr)[i[6]];
-			s[5] = (ptr)[i[7]];
-			x |= (t_u64)s[0] << (i[2] << 3);
-			x |= (t_u64)s[1] << (i[3] << 3);
-			x |= (t_u64)s[2] << (i[4] << 3);
-			x |= (t_u64)s[3] << (i[5] << 3);
-			x |= (t_u64)s[4] << (i[6] << 3);
-			x |= (t_u64)s[5] << (i[7] << 3);
+			if (base == nullptr) __builtin_unreachable();
+
+			x |= *(const t_u32 *__restrict__ const)base;
+			x |= *(const t_u16 *__restrict__ const)ptr;
+			x |= (t_u64)(*(const t_u16 *__restrict__ const)(ptr + size - 2)) << ((size - 2) << 3);
+			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + offset)) << (offset << 3);
+
 			x = xft_from_le64(x);
 			t_u32a hash = KW_HASH(x);
 			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
