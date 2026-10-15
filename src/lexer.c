@@ -182,7 +182,7 @@ whitespace_scalar:
 	// is pure + branchless it can be pipelined properly, we can also remove the all &&identifier
 	// labels from ['A' ... 'Z'], making less states.
 
-	dispatched = (t_u8)xft_tern(dispatched - 'A' < 'Z' - 'A', dispatched | 0x20, dispatched);
+	dispatched = (t_u8)xft_tern((t_u8)(dispatched - 'A') < 'Z' - 'A' + 1, dispatched | 0x20, dispatched);
 	DIAG_GOTO(states[dispatched]);
 
 	identifier: // [a-z][A-Z]_ | utf8
