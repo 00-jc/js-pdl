@@ -1,0 +1,18 @@
+let texto string ;
+function  pideTexto void(void)
+{
+	echo "Escribe algo";
+	prompt texto;
+}
+function write void ( msg string)
+{
+	echo msg;
+}
+
+
+let  num_real float;
+pideTexto();
+  write
+	(texto);
+prompt num_real;
+echo num_real;
