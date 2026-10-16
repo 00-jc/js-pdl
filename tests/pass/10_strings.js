@@ -1,5 +1,5 @@
 // cadenas con comillas dobles, escapes y límite de 64 caracteres
-let string s;
+let s string;
 s = "";
 s = "con \"comillas\" escapadas";
 s = "salto\nde linea y \\ barra";

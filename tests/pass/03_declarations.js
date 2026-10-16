@@ -1,5 +1,5 @@
 // declaraciones de variables de todos los tipos
-let int a;
-let float b;
-let boolean c;
-let string d;
+let a int;
+let b float;
+let c boolean;
+let d string;

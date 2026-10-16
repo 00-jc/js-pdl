@@ -1,5 +1,5 @@
 // sentencia repetitiva do-while y break
-let int i;
+let i int;
 i = 0;
 do
 {

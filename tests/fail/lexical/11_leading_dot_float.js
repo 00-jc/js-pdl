@@ -1,3 +1,3 @@
 // un real debe empezar por dígito
-let float f;
+let f float;
 f = .5;

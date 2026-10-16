@@ -1,9 +1,9 @@
 // programa completo mezclando funciones y sentencias globales
-let int total;
+let total int;
 
-function int factorial(int n)
+function factorial int (n int)
 {
-	let int acc;
+	let acc int;
 	acc = 1;
 	if (n <= 1) return 1;
 	do
@@ -14,12 +14,12 @@ function int factorial(int n)
 	return acc;
 }
 
-function boolean en_rango(int v, int lo, int hi)
+function en_rango boolean (v int, lo int, hi int)
 {
 	return v >= lo && v <= hi;
 }
 
-function void informe(string titulo, int valor)
+function informe void (titulo string, valor int)
 {
 	echo titulo;
 	echo valor;

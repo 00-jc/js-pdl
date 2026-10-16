@@ -1,6 +1,6 @@
 // constantes enteras y reales
-let int i;
-let float f;
+let i int;
+let f float;
 i = 0;
 i = 007;
 i = 32767;

@@ -1,1 +1,1 @@
-let int x; // comentario al final sin salto de línea
+let x int; // comentario al final sin salto de línea

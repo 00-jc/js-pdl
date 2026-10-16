@@ -1,3 +1,3 @@
 // no hay operador ternario
-let int a;
+let a int;
 a = true ? 1 : 2;

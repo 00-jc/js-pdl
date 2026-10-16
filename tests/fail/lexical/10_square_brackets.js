@@ -1,3 +1,3 @@
 // no hay arrays
-let int a;
+let a int;
 a[0] = 1;

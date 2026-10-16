@@ -1,5 +1,5 @@
 // condicional sencilla (sin else, una sola sentencia)
-let int x;
+let x int;
 x = 5;
 if (x > 3) echo "mayor que tres";
 if (x == 5) x += 1;

@@ -1,6 +1,6 @@
 // entrada/salida por terminal
-let string nombre;
-let int edad;
+let nombre string;
+let edad int;
 
 echo "como te llamas?";
 prompt nombre;

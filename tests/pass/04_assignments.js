@@ -1,8 +1,8 @@
 // asignación simple y asignación con suma (+=)
-let int a;
-let float f;
-let string s;
-let boolean ok;
+let a int;
+let f float;
+let s string;
+let ok boolean;
 
 a = 42;
 a += 8;

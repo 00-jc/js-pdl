@@ -1,12 +1,12 @@
 // identificadores con guiones bajos, dígitos y caracteres utf-8,
 // y nombres que solo se parecen a palabras reservadas
-let int _privada;
-let int var_2;
-let int año;
-let int lets;
-let int iff;
-let int returned;
-let int whiles;
-let int functions;
-let int a234567890123456789012345678901234567890123456789012345678901234;
+let _privada int;
+let var_2 int;
+let año int;
+let lets int;
+let iff int;
+let returned int;
+let whiles int;
+let functions int;
+let a234567890123456789012345678901234567890123456789012345678901234 int;
 _privada = 1;

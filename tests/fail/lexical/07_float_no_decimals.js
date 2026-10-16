@@ -1,3 +1,3 @@
 // constante real sin dígitos tras el punto
-let float f;
+let f float;
 f = 1.;

@@ -1,2 +1,2 @@
-let string s;
+let s string;
 s = "acaba con barra\

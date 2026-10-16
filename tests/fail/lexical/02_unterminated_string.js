@@ -1,3 +1,3 @@
 // cadena sin comilla de cierre
-let string s;
+let s string;
 s = "esto nunca se cierra;

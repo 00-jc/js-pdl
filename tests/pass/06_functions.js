@@ -1,26 +1,26 @@
 // definición de funciones, parámetros, retorno y llamadas
-function int suma(int x, int y)
+function suma int (x int, y int)
 {
 	return x + y;
 }
 
-function void saluda(string nombre)
+function saluda void (nombre string)
 {
 	echo "hola ";
 	echo nombre;
 }
 
-function boolean es_positivo(float v)
+function es_positivo boolean (v float)
 {
 	return v > 0.0;
 }
 
-function void nada(void)
+function nada void (void)
 {
 	return;
 }
 
-let int r;
+let r int;
 r = suma(1, 2);
 saluda("mundo");
 nada();

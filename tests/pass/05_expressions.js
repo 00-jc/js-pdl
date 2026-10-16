@@ -1,7 +1,7 @@
 // expresiones con operadores aritméticos, relacionales y lógicos
-let int a;
-let int b;
-let boolean r;
+let a int;
+let b int;
+let r boolean;
 
 a = 10;
 b = 3;

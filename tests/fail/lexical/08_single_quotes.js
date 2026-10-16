@@ -1,3 +1,3 @@
 // las cadenas usan comillas dobles, no simples
-let string s;
+let s string;
 s = 'hola';

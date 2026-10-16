@@ -1,4 +1,4 @@
-let   int	a  ;   // tabs y espacios mezclados
+let   a	int  ;   // tabs y espacios mezclados
 a=1;a+=2;           // sin espacios
 a
 =

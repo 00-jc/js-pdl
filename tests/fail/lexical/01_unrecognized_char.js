@@ -1,3 +1,3 @@
 // '#' no pertenece al alfabeto del lenguaje
-let int a;
+let a int;
 a = 1 # 2;

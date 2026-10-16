@@ -1,3 +1,3 @@
 // '&' sola: no hay aritmética de bits
-let boolean b;
+let b boolean;
 b = true & false;
