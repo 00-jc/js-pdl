@@ -28,6 +28,39 @@ const t_soa_context	token_soa_ctx = {
 };
 DIAG_FAM_INIT_END
 
+// @Jaime: neglible win over xft's generic soa, gcc nor clang unroll it
+// apparently
+__attribute__((__flatten__, __always_inline__, __nonnull__(1, 2)))
+static inline void	ad_hoc_token_push(
+	t_soa *__restrict__ const soa,
+	t_any __restrict__ const _struct)
+{
+	const t_size	n = soa->occupied_elements;
+	const t_size	cap = soa->capacity_elements;
+	t_u8 *const		base = soa->ptr;
+	t_size			off;
+	t_size			size;
+	t_any			start;
+
+	if (base == nullptr) __builtin_unreachable();
+	size = token_soa_ctx.entries[0].size;
+	off = token_soa_ctx.entries[0].offset_from_struct_base;
+	start = (t_any)(base + cap * token_soa_ctx.entries[0].size_of_prev_fields
+			+ n * size);
+	xft_memcpy(start, (t_blk8r)_struct + off, size);
+	size = token_soa_ctx.entries[1].size;
+	off = token_soa_ctx.entries[1].offset_from_struct_base;
+	start = (t_any)(base + cap * token_soa_ctx.entries[1].size_of_prev_fields
+			+ n * size);
+	xft_memcpy(start, (t_blk8r)_struct + off, size);
+	size = token_soa_ctx.entries[2].size;
+	off = token_soa_ctx.entries[2].offset_from_struct_base;
+	start = (t_any)(base + cap * token_soa_ctx.entries[2].size_of_prev_fields
+			+ n * size);
+	xft_memcpy(start, (t_blk8r)_struct + off, size);
+	soa->occupied_elements = n + 1;
+}
+
 __attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
 static inline t_u64a		interpret_numeral(const t_u8 *__restrict__ const mem, t_u32a len)
 {
@@ -341,7 +374,11 @@ whitespace_scalar:
 	}
 
 	success:
-		return (xft_soa_append_from_struct(allocator, soa, &tok, &token_soa_ctx));
+		if (__builtin_expect(soa->occupied_elements == soa->capacity_elements, 0)
+			&& !xft_soa_reserve(allocator, soa, &token_soa_ctx, 1))
+			return (KO);
+		ad_hoc_token_push(soa, &tok);
+		return (OK);
 
 #define LEX_ERR_FMT(msg) "error in %s:%u:%u: " msg "\n"
 #define LEX_ERR(msg) xft_fatptr((t_any)LEX_ERR_FMT(msg), sizeof(LEX_ERR_FMT(msg)) - 1)
