@@ -96,39 +96,6 @@ t_result	lex_next_token(
 )
 {
 
-	DIAG_JUMP_TABLE_BEGIN
-	static const t_cany __restrict__ states[] = {
-		[0 ... UINT8_MAX]	= &&unexpected_char,
-		[0]					= &&success,
-
-		[',']				= &&single_char_token,
-		[';']				= &&single_char_token,
-		['(']				= &&single_char_token,
-		[')']				= &&single_char_token,
-		['{']				= &&single_char_token,
-		['}']				= &&single_char_token,
-		['-']				= &&single_char_token,
-		['*']				= &&single_char_token,
-		['%']				= &&single_char_token,
-
-		['|']				= &&double_op_or_error,
-		['&']				= &&double_op_or_error,
-
-		['=']				= &&possible_operator_followed_by_eq,
-		['!']				= &&possible_operator_followed_by_eq,
-		['<']				= &&possible_operator_followed_by_eq,
-		['>']				= &&possible_operator_followed_by_eq,
-		['+']				= &&possible_operator_followed_by_eq,
-
-		['/']				= &&div_or_comment,
-		['a' ... 'z']		= &&identifier,
-		['_']				= &&identifier,
-		['0' ... '9']		= &&numeric_constant,
-		['"']				= &&string_literal,
-	};
-	DIAG_JUMP_TABLE_END
-
-
 	#define KW_MAGIC 0x1fb2e0cfcf4095cbull
 	#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
 	#define KW_TYPE_START 16
@@ -193,16 +160,8 @@ whitespace:
 	tok.symbol			= 0;
 whitespace_scalar:
 
-	{	// @Jaime: benched: -10% rt on hotloop clang, -8% hotloop gcc. (100 us -> 90 us stable)
-		//
-		// min-non-prefetch: 80 us
-		// min-prefetch: 50 us
-		//
-		// @Why: optimize for hot cases (do not pull &&unexpected labels into cache upfront)
-		xft_prefetch_read0((t_cany)states + 0x21, (0x3E - 0x21) * sizeof(t_any));	// ! , ; " 0123456789 <=>
-		xft_prefetch_read0((t_cany)states + 0x16, (0x7F - 0x61) * sizeof(t_any));	// a-z { | }
-		xft_prefetch_read0((t_cany)src.mem + state->offset, 64 + 8);				// 64 = max len for ids / strings + 8 for possible spaces
-	}
+	// 64 = max len for ids / strings + 8 for possible spaces
+	xft_prefetch_read0((t_cany)src.mem + state->offset, 64 + 8);
 
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
@@ -210,12 +169,48 @@ whitespace_scalar:
 
 	tok.as.lexeme.start = state->offset - 1;
 	
-	// @Jaime: lowercase for all letters, since we prefetched that case and this expression
-	// is pure + branchless it can be pipelined properly, we can also remove the all &&identifier
-	// labels from ['A' ... 'Z'], making less states.
-
-	dispatched = (t_u8)xft_tern((t_u8)(dispatched - 'A') < 'Z' - 'A' + 1, dispatched | 0x20, dispatched);
-	DIAG_GOTO(states[dispatched]);
+	switch (dispatched)
+	{
+		case 0:
+			goto success;
+		case ',': __attribute__((__fallthrough__));
+		case ';': __attribute__((__fallthrough__));
+		case '(': __attribute__((__fallthrough__));
+		case ')': __attribute__((__fallthrough__));
+		case '{': __attribute__((__fallthrough__));
+		case '}': __attribute__((__fallthrough__));
+		case '-': __attribute__((__fallthrough__));
+		case '*': __attribute__((__fallthrough__));
+		case '%':
+			goto single_char_token;
+		case '|': __attribute__((__fallthrough__));
+		case '&':
+			goto double_op_or_error;
+		case '=': __attribute__((__fallthrough__));
+		case '!': __attribute__((__fallthrough__));
+		case '<': __attribute__((__fallthrough__));
+		case '>': __attribute__((__fallthrough__));
+		case '+':
+			goto possible_operator_followed_by_eq;
+		case '/':
+			goto div_or_comment;
+		case '0': __attribute__((__fallthrough__));
+		case '1': __attribute__((__fallthrough__));
+		case '2': __attribute__((__fallthrough__));
+		case '3': __attribute__((__fallthrough__));
+		case '4': __attribute__((__fallthrough__));
+		case '5': __attribute__((__fallthrough__));
+		case '6': __attribute__((__fallthrough__));
+		case '7': __attribute__((__fallthrough__));
+		case '8': __attribute__((__fallthrough__));
+		case '9':
+			goto numeric_constant;
+		case '"':
+			goto string_literal;
+		default:
+			if (xft_xid_is_start(dispatched)) goto identifier;
+			goto unexpected_char;
+	}
 
 	identifier: // [a-z][A-Z]_ | utf8
 	{
