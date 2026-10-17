@@ -28,7 +28,7 @@ const t_soa_context	token_soa_ctx = {
 };
 DIAG_FAM_INIT_END
 
-// @Jaime: neglible win over xft's generic soa, gcc nor clang unroll it
+// @Jaime: neglible win over xft's generic soa (x0.10), gcc nor clang unroll it
 // apparently
 __attribute__((__flatten__, __always_inline__, __nonnull__(1, 2)))
 static inline void	ad_hoc_token_push(
@@ -97,7 +97,7 @@ t_result	lex_next_token(
 {
 
 	DIAG_JUMP_TABLE_BEGIN
-	static const t_any states[] = {
+	static const t_cany __restrict__ states[] = {
 		[0 ... UINT8_MAX]	= &&unexpected_char,
 		[0]					= &&success,
 
@@ -123,7 +123,6 @@ t_result	lex_next_token(
 		['/']				= &&div_or_comment,
 		['a' ... 'z']		= &&identifier,
 		['_']				= &&identifier,
-		[0x80 ... UINT8_MAX]= &&identifier,
 		['0' ... '9']		= &&numeric_constant,
 		['"']				= &&string_literal,
 	};
@@ -200,9 +199,9 @@ whitespace_scalar:
 		// min-prefetch: 50 us
 		//
 		// @Why: optimize for hot cases (do not pull &&unexpected labels into cache upfront)
-		xft_prefetch_read0(states + 0x21, (0x3E - 0x21) * sizeof(t_any));	// ! , ; " 0123456789 <=>
-		xft_prefetch_read0(states + 0x16, (0x7F - 0x61) * sizeof(t_any));	// a-z { | }
-		xft_prefetch_read0(src.mem + state->offset, 64 + 8);				// 64 = max len for ids / strings + 8 for possible spaces
+		xft_prefetch_read0((t_cany)states + 0x21, (0x3E - 0x21) * sizeof(t_any));	// ! , ; " 0123456789 <=>
+		xft_prefetch_read0((t_cany)states + 0x16, (0x7F - 0x61) * sizeof(t_any));	// a-z { | }
+		xft_prefetch_read0((t_cany)src.mem + state->offset, 64 + 8);				// 64 = max len for ids / strings + 8 for possible spaces
 	}
 
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
@@ -221,7 +220,7 @@ whitespace_scalar:
 	identifier: // [a-z][A-Z]_ | utf8
 	{
 		tok.type = TOK_IDENTIFIER;
-		while (state->offset < src.size && (xft_isalpha(src.mem[state->offset]) | xft_isdigit(src.mem[state->offset]) | (src.mem[state->offset] == '_') | (src.mem[state->offset] >= 0x80)))
+		while (state->offset < src.size && xft_xid_is_continue(src.mem[state->offset]))
 			++state->offset;
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
@@ -310,6 +309,8 @@ whitespace_scalar:
 
 	string_literal:
 	{
+		t_u8	compound_elements = 0;
+
 		tok.type = TOK_STRING_LITERAL;
 		tok.as.lexeme.start = state->offset;
 		while (1)
@@ -318,13 +319,27 @@ whitespace_scalar:
 			if (__builtin_expect(state->offset >= src.size, 0)) goto error_unterminated_string;
 			switch (src.mem[state->offset])
 			{
+				case 0x00 ... 0x1F:
+					goto error_string_cannot_contain_unprintable;
 				case '\\':
-					state->offset += 2;
+					t_u32a idx		= xft_tern(state->offset >= src.size, state->offset, state->offset + 1);
+					t_u32a mask 	= xft_tern(state->offset >= src.size, 0, ~0);
+					t_u8 c			= src.mem[idx] & mask;
+					t_u8 is_escaped	= !!(	(c == '\\')
+										|	(c == 'n')
+										|	(c == 't')
+										|	(c == 'r')
+										|	(c == '"')
+										|	(c == 'v'));
+
+					compound_elements	+= is_escaped;
+					state->offset		+= xft_tern(is_escaped, 2, 1);
 					goto strlit_loop;
 				case '"':
 					tok.as.lexeme.end = state->offset++;
-					if (__builtin_expect(tok.as.lexeme.end - tok.as.lexeme.start > 64, 0)) goto strlit_too_big;
+					if (__builtin_expect((tok.as.lexeme.end - tok.as.lexeme.start) - compound_elements > 64, 0)) goto strlit_too_big;
 					goto success;
+				case 0x80 ... 0xFF: __attribute__((__fallthrough__));
 				default:
 					++state->offset;
 			}
@@ -385,6 +400,10 @@ whitespace_scalar:
 
 	no_double_error:
 		fmt = LEX_ERR("&& and || have to appear as logical operators, no bit arithmetic is supported");
+		goto report_error;
+	error_string_cannot_contain_unprintable:
+		--tok.as.lexeme.start;
+		fmt = LEX_ERR("strings cannot contain unprintable chars");
 		goto report_error;
 	error_unterminated_string:
 		--tok.as.lexeme.start;
