@@ -152,6 +152,12 @@ t_result	lex_next_token(
 	t_u64		args[4];
 	t_u32a		line;
 
+	t_nvec		wide;
+	t_nmask		mask;
+	t_nmask		valid;
+	t_size		rem;
+	t_u32a		point;
+
 	if (src.mem == nullptr) __builtin_unreachable();
 
 whitespace:
@@ -208,15 +214,37 @@ whitespace_scalar:
 		case '"':
 			goto string_literal;
 		default:
-			if (xft_xid_is_start(dispatched)) goto identifier;
-			goto unexpected_char;
+			point = xft_xid_load_point(src.mem + tok.as.lexeme.start, src.size - tok.as.lexeme.start);
+			if (!xft_xid_is_start(xft_xid_decode(point))) goto unexpected_char;
+			state->offset += xft_xid_codepoint_len(point) - 1;
+			goto identifier;
 	}
 
 	identifier: // [a-z][A-Z]_ | utf8
 	{
 		tok.type = TOK_IDENTIFIER;
-		while (state->offset < src.size && xft_xid_is_continue(src.mem[state->offset]))
-			++state->offset;
+		while ((rem = src.size - state->offset) != 0)
+		{
+			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
+			wide = xft_vmask_load(src.mem + state->offset, valid);
+			mask = xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_');
+			mask = ~mask & valid;
+			if (mask != 0)
+			{
+				state->offset += xft_memctz_u64(mask);
+				break;
+			}
+			state->offset += xft_tern(rem < sizeof(wide), rem, sizeof(wide));
+		}
+
+		// utf8 and whatever the vector path stopped on
+		while (state->offset < src.size)
+		{
+			point = xft_xid_load_point(src.mem + state->offset, src.size - state->offset);
+			if (!xft_xid_is_continue(xft_xid_decode(point))) break;
+			state->offset += xft_xid_codepoint_len(point);
+		}
+
 		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = state->offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
