@@ -74,19 +74,16 @@ typedef struct s_token
 {
 	t_token_type		type;
 	t_token_body_union 	as;
-	t_size				symbol;
 }	t_token;
 
 enum e_token_soa_field {
 	TOKEN_SOA_TYPE,
 	TOKEN_SOA_AS,
-	TOKEN_SOA_SYMBOL,
 	TOKEN_SOA_FIELDS_COUNT,
 };
 
 #define TOKEN_SOA_TYPE_SIZE		sizeof(((t_token *)0)->type)
 #define TOKEN_SOA_AS_SIZE		sizeof(((t_token *)0)->as)
-#define TOKEN_SOA_SYMBOL_SIZE	sizeof(((t_token *)0)->symbol)
 
 extern const t_soa_context	token_soa_ctx;
 

@@ -1,11 +1,10 @@
 #include <xft.h>
 #include "diag.h"
 #include "lexer.h"
-#include "symbols.h"
 
 DIAG_FAM_INIT_BEGIN
 const t_soa_context	token_soa_ctx = {
-	.total_struct_size	= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE + TOKEN_SOA_SYMBOL_SIZE,
+	.total_struct_size	= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE,
 	.max_alignment		= alignof(t_token),
 	.fields_count		= TOKEN_SOA_FIELDS_COUNT,
 	.entries			= {
@@ -18,11 +17,6 @@ const t_soa_context	token_soa_ctx = {
 			.size						= TOKEN_SOA_AS_SIZE,
 			.offset_from_struct_base	= __builtin_offsetof(t_token, as),
 			.size_of_prev_fields		= TOKEN_SOA_TYPE_SIZE,
-		},
-		[TOKEN_SOA_SYMBOL] = {
-			.size						= TOKEN_SOA_SYMBOL_SIZE,
-			.offset_from_struct_base	= __builtin_offsetof(t_token, symbol),
-			.size_of_prev_fields		= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE,
 		},
 	},
 };
@@ -56,11 +50,6 @@ static inline void	ad_hoc_token_push(
 			+ n * size);
 	xft_memcpy(start, (t_blk8r)_struct + off, size);
 
-	size = token_soa_ctx.entries[2].size;
-	off = token_soa_ctx.entries[2].offset_from_struct_base;
-	start = (t_any)(base + cap * token_soa_ctx.entries[2].size_of_prev_fields
-			+ n * size);
-	xft_memcpy(start, (t_blk8r)_struct + off, size);
 
 	++soa->occupied_elements;
 }
@@ -157,7 +146,6 @@ t_result	lex_next_token(
 
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
-	tok.symbol			= 0;
 
 	t_nmask				newlines;
 	t_nmask				whitespace;

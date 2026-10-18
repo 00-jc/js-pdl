@@ -23,7 +23,6 @@ endif()
 target_sources(js-pdl PRIVATE
     src/entry_point.c
     ${LEXER_SOURCE}
-    src/symbols.c
     src/errors.c
 )
 

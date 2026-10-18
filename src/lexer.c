@@ -1,11 +1,10 @@
 #include <xft.h>
 #include "diag.h"
 #include "lexer.h"
-#include "symbols.h"
 
 DIAG_FAM_INIT_BEGIN
 const t_soa_context	token_soa_ctx = {
-	.total_struct_size	= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE + TOKEN_SOA_SYMBOL_SIZE,
+	.total_struct_size	= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE,
 	.max_alignment		= alignof(t_token),
 	.fields_count		= TOKEN_SOA_FIELDS_COUNT,
 	.entries			= {
@@ -18,11 +17,6 @@ const t_soa_context	token_soa_ctx = {
 			.size						= TOKEN_SOA_AS_SIZE,
 			.offset_from_struct_base	= __builtin_offsetof(t_token, as),
 			.size_of_prev_fields		= TOKEN_SOA_TYPE_SIZE,
-		},
-		[TOKEN_SOA_SYMBOL] = {
-			.size						= TOKEN_SOA_SYMBOL_SIZE,
-			.offset_from_struct_base	= __builtin_offsetof(t_token, symbol),
-			.size_of_prev_fields		= TOKEN_SOA_TYPE_SIZE + TOKEN_SOA_AS_SIZE,
 		},
 	},
 };
@@ -51,11 +45,6 @@ static inline void	ad_hoc_token_push(
 	size = token_soa_ctx.entries[1].size;
 	off = token_soa_ctx.entries[1].offset_from_struct_base;
 	start = (t_any)(base + cap * token_soa_ctx.entries[1].size_of_prev_fields
-			+ n * size);
-	xft_memcpy(start, (t_blk8r)_struct + off, size);
-	size = token_soa_ctx.entries[2].size;
-	off = token_soa_ctx.entries[2].offset_from_struct_base;
-	start = (t_any)(base + cap * token_soa_ctx.entries[2].size_of_prev_fields
 			+ n * size);
 	xft_memcpy(start, (t_blk8r)_struct + off, size);
 	soa->occupied_elements = n + 1;
@@ -142,10 +131,6 @@ t_result	lex_next_token(
 	};
 
 
-	t_symbol	sym;
-	t_buffer	key;
-	t_size		get_or_put;
-	t_size		current_symbol;
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;
@@ -163,7 +148,6 @@ t_result	lex_next_token(
 whitespace:
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
-	tok.symbol			= 0;
 whitespace_scalar:
 
 	// 64 = max len for ids / strings + 8 for possible spaces
@@ -275,24 +259,6 @@ whitespace_scalar:
 			x = xft_from_le64(x);
 			t_u32a hash = KW_HASH(x);
 			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
-		}
-		if (tok.type == TOK_IDENTIFIER)
-		{
-			current_symbol = state->symbol_dense_array->occupied_elements;
-			key = xft_fatptr(src.mem + tok.as.lexeme.start, size);
-			get_or_put = xft_indexmap_lookup(state->symbol_table, key);
-			if (__builtin_expect(get_or_put == INDEXMAP_NPOS, 0))
-			{
-				sym = (t_symbol){
-					.scope = 0,
-				};
-				if (__builtin_expect(xft_soa_append_from_struct(allocator, state->symbol_dense_array, &sym, &symbol_soa_ctx) == KO, 0))
-					return KO;
-				if (__builtin_expect(xft_indexmap_insert(allocator, state->symbol_table, key, current_symbol) == KO, 0))
-					return KO;
-				get_or_put = current_symbol;
-			}
-			tok.symbol = get_or_put;
 		}
 		goto success; // Generar token
 	}

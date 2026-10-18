@@ -8,8 +8,6 @@
 
 typedef struct s_lexer_state {
 	t_u32a						offset;
-	t_indexmap	*__restrict__	symbol_table;
-	t_soa	*__restrict__		symbol_dense_array;
 } t_lexer_state;
 
 #else
@@ -30,8 +28,6 @@ typedef struct s_lexer_carry {
 typedef struct s_lexer_state {
 	t_u32a						offset;
 	t_u32a						relative;
-	t_indexmap	*__restrict__	symbol_table;
-	t_soa	*__restrict__		symbol_dense_array;
 	t_nmask						starts;
 	t_nmask						ends;
 	t_lexer_carry				carry;
