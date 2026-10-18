@@ -48,9 +48,17 @@ typedef struct s_simple_attributes
 	t_symbol_simple_type	type;
 }	t_simple_attributes;
 
+typedef struct s_scope
+{
+	t_indexmap	map;
+	t_u32a		simple_mark;
+	t_u32a		function_mark;
+}	t_scope;
+
 typedef struct s_symbol_table
 {
-	t_vec		scope_map_array;	// vec<t_indexmap>
+	t_size		scope_depth;
+	t_vec		scope_map_array;	// vec<t_scope>, pool of scopes; [0, scope_depth) are live
 	t_vec		simple_types;		// vec<t_simple_attributes>
 	t_vec		function_types;		// vec<t_function_attributes>
 	t_vec		arg_types;			// vec<t_symbol_simple_type>
@@ -98,3 +106,13 @@ typedef struct s_symbol_table
 //	si no podemos ir haciendo pop() al vec de los mapas despues de volcar los datos o lo que sea.
 //	si quisieramos ademas ahorrar memoria podemos reusar la memoria del resto de vectores al
 //	hacer pop(), o si no seguir creciendo los arrays, yo apostaría por la primera (arg_types no se toca).
+
+#define SYMBOLS_INITIAL_SCOPES 25
+
+t_symbol_table	pdl_new_symbol_table(t_allocator allocator);
+void			pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
+					__attribute__((__nonnull__(2)));
+t_result		pdl_push_scope(t_allocator allocator, t_symbol_table *table)
+					__attribute__((__nonnull__(2)));
+void			pdl_pop_namespace(t_symbol_table *table)
+					__attribute__((__nonnull__(1)));

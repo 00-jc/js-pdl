@@ -10,3 +10,4 @@
 #define CANNOT_MAP_FILE "Cannot map source file, check that it exists and is readable\n"
 #define TOKENS_SOA_OOM "Cannot allocate token storage, most likely OOM\n"
 #define LINES_OOM "Cannot allocate line table, most likely OOM\n"
+#define SYMBOLS_OOM "Cannot allocate symbol table, most likely OOM\n"

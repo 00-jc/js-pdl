@@ -14,6 +14,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 	t_allocator		allocator;
 	t_buffer		src_buf;
 	t_soa			tokens_soa;
+	t_symbol_table	symbols;
 	t_lexer_state	lexer_state;
 	t_buffer		filename;
 	t_result		result;
@@ -52,6 +53,16 @@ void	xft_main(const t_any *__restrict__ const sp)
 	if (__builtin_expect(tokens_soa.ptr == nullptr, 0))
 	{
 		xft_writer_write(&_stderr, xft_fatptr((t_any)TOKENS_SOA_OOM, sizeof(TOKENS_SOA_OOM) - 1));
+		xft_gpa_destroy(&gpa);
+		xft_unmap_file(src_buf);
+		xft_writer_flush(&_stderr);
+		xft_exit(1);
+	}
+
+	symbols = pdl_new_symbol_table(allocator);
+	if (__builtin_expect(symbols.scope_map_array.buf.mem == nullptr, 0))
+	{
+		xft_writer_write(&_stderr, xft_fatptr((t_any)SYMBOLS_OOM, sizeof(SYMBOLS_OOM) - 1));
 		xft_gpa_destroy(&gpa);
 		xft_unmap_file(src_buf);
 		xft_writer_flush(&_stderr);
@@ -114,6 +125,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 
 	xft_unmap_file(src_buf);
 	if (err_state.is_init) xft_vec_destroy(allocator, &err_state.line_offsets);
+	pdl_destroy_symbol_table(allocator, &symbols);
 	xft_destroy_soa(allocator, &tokens_soa);
 	xft_gpa_destroy(&gpa);
 	xft_writer_flush(&_stdout);

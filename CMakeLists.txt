@@ -24,6 +24,7 @@ target_sources(js-pdl PRIVATE
     src/entry_point.c
     ${LEXER_SOURCE}
     src/errors.c
+    src/symbols.c
 )
 
 target_include_directories(js-pdl PRIVATE include)
