@@ -203,14 +203,10 @@ t_result	lex_next_token(
 		//
 		// - carries stop the first position from being a start.
 
-		if (__builtin_expect(src.size < state->offset + sizeof(wide), 0))
-		{
-			t_u8 remain = (t_u8)(src.size - state->offset);
-			generic_mask = (1ull << remain) - 1;
-			wide = xft_vsplat(' ') & (xft_viota() >= xft_vsplat(remain));
-			wide |= xft_vmask_load(src.mem + state->offset, generic_mask);
-		}
-		else wide = *(t_blknr)(src.mem + state->offset);
+		t_u8 remain = (t_u8)(src.size - state->offset);
+		generic_mask = (1ull << remain) - 1;
+		wide = xft_vsplat(' ') & (xft_viota() >= xft_vsplat(remain));
+		wide |= xft_vmask_load(src.mem + state->offset, generic_mask);
 
 		t_u32a		next_byte_idx	= xft_tern(state->offset + sizeof(wide) < src.size, state->offset + sizeof(wide), state->offset);
 		t_u32a		mask			= xft_tern(state->offset + sizeof(wide) < src.size, ~0, 0);
