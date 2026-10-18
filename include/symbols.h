@@ -1,6 +1,7 @@
 #pragma once
 
 #include <xft.h>
+#include "tokens.h"
 
 typedef enum e_symbol_simple_type : t_u8
 {
@@ -19,6 +20,19 @@ typedef struct s_symbol
 	} 				type					: 1;
 	t_u32a			index_to_dense_array	: 31;
 }	t_symbol;
+
+// to make reinterpreting casts stop whining
+typedef union u_sym_32
+{
+	t_symbol	sym;
+	t_u32a		u32;
+}	t_u_sym_32;
+
+typedef struct s_symbol_lookup_result
+{
+	bool			is_some;
+	t_symbol		sym;
+}	t_symbol_lookup_result;
 
 #ifndef MADE_TEST_SYM
 # define MADE_TEST_SYM
@@ -50,9 +64,8 @@ typedef struct s_simple_attributes
 
 typedef struct s_scope
 {
-	t_indexmap	map;
-	t_u32a		simple_mark;
-	t_u32a		function_mark;
+	t_indexmap		map;
+	t_u32a			simple_mark;
 }	t_scope;
 
 typedef struct s_symbol_table
@@ -104,15 +117,33 @@ typedef struct s_symbol_table
 //		-	análisis
 //
 //	si no podemos ir haciendo pop() al vec de los mapas despues de volcar los datos o lo que sea.
-//	si quisieramos ademas ahorrar memoria podemos reusar la memoria del resto de vectores al
-//	hacer pop(), o si no seguir creciendo los arrays, yo apostaría por la primera (arg_types no se toca).
+//	Las funciones solo se declaran en el namespace 0, que nunca se hace pop(), así que siguen
+//	siendo alcanzables por el mapa; el lookup de una función va directamente al namespace 0.
+//	Al hacer pop() solo se reusa la memoria de simple_types (simple_mark). function_types y
+//	arg_types solo crecen: las funciones y sus runs de argumentos tienen que seguir siendo
+//	válidos para el type checking.
 
 #define SYMBOLS_INITIAL_SCOPES 25
 
-t_symbol_table	pdl_new_symbol_table(t_allocator allocator);
-void			pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
-					__attribute__((__nonnull__(2)));
-t_result		pdl_push_scope(t_allocator allocator, t_symbol_table *table)
-					__attribute__((__nonnull__(2)));
-void			pdl_pop_namespace(t_symbol_table *table)
-					__attribute__((__nonnull__(1)));
+t_symbol_table				pdl_new_symbol_table(t_allocator allocator);
+void						pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
+								__attribute__((__nonnull__(2)));
+t_result					pdl_push_scope(t_allocator allocator, t_symbol_table *table)
+								__attribute__((__nonnull__(2)));
+void						pdl_pop_namespace(t_symbol_table *table)
+								__attribute__((__nonnull__(1)));
+t_result					pdl_intern_simple_symbol_to_current_namespace(t_allocator allocator,
+								t_symbol_table *table, const t_token_body_union *tokens, const t_buffer src,
+								t_size idx_of_token, t_symbol_simple_type typeof_sym)
+								__attribute__((__nonnull__(2, 3)));
+t_result					pdl_intern_function_symbol_to_global_namespace(t_allocator allocator,
+								t_symbol_table *table, const t_symbol_simple_type *args,
+								const t_token_body_union *tokens, const t_buffer src,
+								t_size idx_of_token, t_symbol_simple_type return_type, t_size nargs)
+								__attribute__((__nonnull__(2, 3, 4)));
+t_symbol_lookup_result		pdl_get_symbol_from_current_namespace_up(const t_symbol_table *table, t_buffer name,
+								bool is_function)
+								__attribute__((__nonnull__(1)));
+t_result					pdl_dump_current_namespace(t_writer *writer, const t_symbol_table *table,
+								const t_token_body_union *tokens, const t_buffer src)
+								__attribute__((__nonnull__(1, 2, 3)));

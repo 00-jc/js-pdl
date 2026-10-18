@@ -69,6 +69,16 @@ void	xft_main(const t_any *__restrict__ const sp)
 		xft_exit(1);
 	}
 
+	// @Todo: no parser yet, so everything goes into a single namespace opened here.
+	if (__builtin_expect(pdl_push_scope(allocator, &symbols) == KO, 0))
+	{
+		xft_writer_write(&_stderr, xft_fatptr((t_any)SYMBOLS_OOM, sizeof(SYMBOLS_OOM) - 1));
+		xft_gpa_destroy(&gpa);
+		xft_unmap_file(src_buf);
+		xft_writer_flush(&_stderr);
+		xft_exit(1);
+	}
+
 	err_state.is_init = false;
 	err_state.writer = &_stderr;
 	lexer_state = (t_lexer_state)
@@ -78,8 +88,26 @@ void	xft_main(const t_any *__restrict__ const sp)
 	filename = xft_fatptr(ptrs.argv[1], xft_strlen((t_any)ptrs.argv[1]));
 	while ((result = lex_next_token(allocator, src_buf, filename, &lexer_state, &tokens_soa, &err_state)) == OK)
 	{
-		const t_token_type *__restrict__ const ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, 0);
-		if (__builtin_expect(ttype[tokens_soa.occupied_elements - 1] == TOK_EOF, 0)) break;
+		const t_size								last = tokens_soa.occupied_elements - 1;
+		const t_token_type *__restrict__ const		ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
+		const t_token_body_union *__restrict__ const	tvalues = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_AS);
+		t_buffer									name;
+
+		if (__builtin_expect(ttype[last] == TOK_EOF, 0)) break;
+		if (ttype[last] != TOK_IDENTIFIER) continue;
+
+		// @HACK: no parser yet, every identifier is interned as a simple int on first sight, we can't know anything else
+		// and since we've already done the full table well this is a hack.
+	
+		name = xft_fatptr(src_buf.mem + tvalues[last].lexeme.start, tvalues[last].lexeme.end - tvalues[last].lexeme.start);
+		if (pdl_get_symbol_from_current_namespace_up(&symbols, name, false).is_some) continue;
+		if (__builtin_expect(pdl_intern_simple_symbol_to_current_namespace(allocator, &symbols,
+				tvalues, src_buf, last, SYM_INT) == KO, 0))
+		{
+			xft_writer_write(&_stderr, xft_fatptr((t_any)SYMBOLS_OOM, sizeof(SYMBOLS_OOM) - 1));
+			result = KO;
+			break;
+		}
 	}
 
 	// <TIPO, ''|valor|tabla?)>\n
@@ -121,10 +149,12 @@ void	xft_main(const t_any *__restrict__ const sp)
 					xft_fmt_writer(&_stdout, xft_fatptr((t_any)"<%s,>\n", sizeof("<%s,>\n") - 1), (t_any)&args);
 			}
 		}
+		pdl_dump_current_namespace(&_stdout, &symbols, tvalues, src_buf);
 	}
 
 	xft_unmap_file(src_buf);
 	if (err_state.is_init) xft_vec_destroy(allocator, &err_state.line_offsets);
+	pdl_pop_namespace(&symbols);
 	pdl_destroy_symbol_table(allocator, &symbols);
 	xft_destroy_soa(allocator, &tokens_soa);
 	xft_gpa_destroy(&gpa);
