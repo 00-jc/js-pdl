@@ -110,7 +110,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 
 	if (opts->dump_tokens)
 	{
-		fd = xft_open((const char *)opts->token_file.mem, O_WRONLY | O_CREAT | O_TRUNC);
+		fd = xft_open((const char *)opts->token_file.mem, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (__builtin_expect(fd == -1, 0))
 			return (report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
 		out = xft_get_fs_writer(xft_fatptr(buffer, sizeof(buffer)), fd);
@@ -129,7 +129,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 					str = xft_fatptr(data->src_buf.mem + tvalues[i].lexeme.start, tvalues[i].lexeme.end - tvalues[i].lexeme.start);
 					sym = pdl_get_symbol_from_current_namespace_up(&data->symbols, str, false);
 
-					if (__builtin_expect(sym.is_some = 0, 0)) __builtin_unreachable();
+					if (__builtin_expect(sym.is_some = 0, 0)) __builtin_trap(); // just a hack for now
 
 					args[2] = (t_u_sym_32){.sym = sym.sym}.u32;
 					xft_fmt_writer(&out, xft_fatptr((t_any)"<%s, %q>\n", sizeof("<%s, %q>\n") - 1), (t_any)&args);
@@ -158,7 +158,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 
 	if (opts->dump_tables)
 	{
-		fd = xft_open((const char *)opts->table_file.mem, O_WRONLY | O_CREAT | O_TRUNC);
+		fd = xft_open((const char *)opts->table_file.mem, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (__builtin_expect(fd == -1, 0))
 			return (report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
 		out = xft_get_fs_writer(xft_fatptr(buffer, sizeof(buffer)), fd);
