@@ -141,6 +141,7 @@ t_result	lex_next_token(
 	t_nmask		mask;
 	t_nmask		valid;
 	t_size		rem;
+	t_size		lane;
 	t_u32a		point;
 
 	if (src.mem == nullptr) __builtin_unreachable();
@@ -148,14 +149,22 @@ t_result	lex_next_token(
 whitespace:
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
-whitespace_scalar:
 
 	// 64 = max len for ids / strings + 8 for possible spaces
 	xft_prefetch_read0((t_cany)(src.mem + state->offset), 64 + 8);
 
+	do
+	{
+		rem = src.size - state->offset;
+		valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
+		wide = xft_vmask_load(src.mem + state->offset, valid);
+		mask = ~(xft_vrangemask(wide, 9, 13) | xft_veqmask(wide, ' '));
+		lane = xft_memctz_u64(mask);
+		state->offset += xft_tern(mask != 0, lane, sizeof(wide));
+	} while (mask == 0);
+
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
-	if (xft_isspace(dispatched)) goto whitespace_scalar;
 
 	tok.as.lexeme.start = state->offset - 1;
 	
@@ -200,25 +209,22 @@ whitespace_scalar:
 		default:
 			point = xft_xid_load_point(src.mem + tok.as.lexeme.start, src.size - tok.as.lexeme.start);
 			if (!xft_xid_is_start(xft_xid_decode(point))) goto unexpected_char;
-			state->offset += xft_xid_codepoint_len(point) - 1;
 			goto identifier;
 	}
 
 	identifier: // [a-zA-Z_]
 	{
 		tok.type = TOK_IDENTIFIER;
-		while ((rem = src.size - state->offset) != 0) // [a-zA-Z_][a-zA-Z0-9_]+
+
+		// [a-zA-Z_][a-zA-Z0-9_]+
+		mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_')) >> lane;
+		state->offset = tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane); // leer
+		while (mask == 0 && (rem = src.size - state->offset) != 0)
 		{
 			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
 			wide = xft_vmask_load(src.mem + state->offset, valid);
-			mask = xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_');
-			mask = ~mask & valid;
-			if (mask != 0)
-			{
-				state->offset += xft_memctz_u64(mask); // leer
-				break;
-			}
-			state->offset += xft_tern(rem < sizeof(wide), rem, sizeof(wide)); // leer
+			mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_'));
+			state->offset += xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide)); // leer
 		}
 
 		// utf8 and whatever the vector path stopped on
