@@ -88,17 +88,17 @@ void	xft_main(const t_any *__restrict__ const sp)
 	filename = xft_fatptr(ptrs.argv[1], xft_strlen((t_any)ptrs.argv[1]));
 	while ((result = lex_next_token(allocator, src_buf, filename, &lexer_state, &tokens_soa, &err_state)) == OK)
 	{
-		const t_size								last = tokens_soa.occupied_elements - 1;
-		const t_token_type *__restrict__ const		ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
+		const t_size									last = tokens_soa.occupied_elements - 1;
+		const t_token_type *__restrict__ const			ttype = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
 		const t_token_body_union *__restrict__ const	tvalues = xft_soa_fields(&tokens_soa, &token_soa_ctx, TOKEN_SOA_AS);
-		t_buffer									name;
+		t_buffer										name;
 
 		if (__builtin_expect(ttype[last] == TOK_EOF, 0)) break;
 		if (ttype[last] != TOK_IDENTIFIER) continue;
 
 		// @HACK: no parser yet, every identifier is interned as a simple int on first sight, we can't know anything else
 		// and since we've already done the full table well this is a hack.
-	
+
 		name = xft_fatptr(src_buf.mem + tvalues[last].lexeme.start, tvalues[last].lexeme.end - tvalues[last].lexeme.start);
 		if (pdl_get_symbol_from_current_namespace_up(&symbols, name, false).is_some) continue;
 		if (__builtin_expect(pdl_intern_simple_symbol_to_current_namespace(allocator, &symbols,
