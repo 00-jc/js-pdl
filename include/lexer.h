@@ -8,7 +8,7 @@ typedef struct s_lexer_state {
 	t_u32a						offset;
 } t_lexer_state;
 
-t_result	lex_next_token(
+t_result	pdl_lex_next_token(
 	t_allocator							allocator,
 	const t_buffer						src,
 	const t_buffer						file_name,

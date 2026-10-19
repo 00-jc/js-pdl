@@ -25,7 +25,7 @@ DIAG_FAM_INIT_END
 // @Jaime: neglible win over xft's generic soa (x0.10), gcc nor clang unroll it
 // apparently
 __attribute__((__flatten__, __always_inline__, __nonnull__(1, 2)))
-static inline void	ad_hoc_token_push(
+static inline void	pdl__ad_hoc_token_push(
 	t_soa *__restrict__ const soa,
 	t_any __restrict__ const _struct)
 {
@@ -51,7 +51,7 @@ static inline void	ad_hoc_token_push(
 }
 
 __attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
-static inline t_u64a		interpret_numeral(const t_u8 *__restrict__ const mem, t_u32a len)
+static inline t_u64a		pdl__interpret_numeral(const t_u8 *__restrict__ const mem, t_u32a len)
 {
 	t_u64a	value;
 	t_size	it;
@@ -63,7 +63,7 @@ static inline t_u64a		interpret_numeral(const t_u8 *__restrict__ const mem, t_u3
 }
 
 __attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
-static inline t_f64a		interpret_decimal_part(const t_u8 *__restrict__ const mem, t_u32a len)
+static inline t_f64a		pdl__interpret_decimal_part(const t_u8 *__restrict__ const mem, t_u32a len)
 {
 	t_f64a	value;
 	t_size	it;
@@ -75,7 +75,7 @@ static inline t_f64a		interpret_decimal_part(const t_u8 *__restrict__ const mem,
 }
 
 __attribute__((noinline, __nonnull__(4, 5, 6), __hot__))
-t_result	lex_next_token(
+t_result	pdl_lex_next_token(
 	t_allocator							allocator,
 	const t_buffer						src,
 	const t_buffer						file_name,
@@ -280,7 +280,7 @@ whitespace:
 			++state->offset; // leer
 			goto float_constant;
 		}
-		tok.as.value.i = interpret_numeral(src.mem + tok.as.lexeme.start, state->offset - tok.as.lexeme.start); // obtener valor
+		tok.as.value.i = pdl__interpret_numeral(src.mem + tok.as.lexeme.start, state->offset - tok.as.lexeme.start); // obtener valor
 		goto success; // Generar Token
 	}
 
@@ -296,8 +296,8 @@ whitespace:
 
 		if (__builtin_expect(decimal_start == state->offset, 0)) goto float_follow_dot_error;
 
-		t_u64a lhs = interpret_numeral(src.mem + real_part_start, real_part_end - real_part_start); // obtener valor entero
-		t_f64a rhs = interpret_decimal_part(src.mem + decimal_start, state->offset - decimal_start); // obtener valor decimal
+		t_u64a lhs = pdl__interpret_numeral(src.mem + real_part_start, real_part_end - real_part_start); // obtener valor entero
+		t_f64a rhs = pdl__interpret_decimal_part(src.mem + decimal_start, state->offset - decimal_start); // obtener valor decimal
 		tok.as.value.f = (t_f64a)lhs + rhs; // obtener valor
 		goto success; // Generar token
 	}
@@ -391,7 +391,7 @@ DIAG_CASE_RANGE_END
 		if (__builtin_expect(soa->occupied_elements == soa->capacity_elements, 0)
 			&& !xft_soa_reserve(allocator, soa, &token_soa_ctx, 1))
 			return (KO);
-		ad_hoc_token_push(soa, &tok);
+		pdl__ad_hoc_token_push(soa, &tok);
 		return (OK);
 
 // ERRORES
@@ -426,7 +426,7 @@ DIAG_CASE_RANGE_END
 #undef LEX_ERR_FMT
 
 	report_error:
-		if (__builtin_expect(line_of_token_lazy_init(allocator, error_state, tok.as.lexeme.start, &line, src) == KO, 0))
+		if (__builtin_expect(pdl_line_of_token_lazy_init(allocator, error_state, tok.as.lexeme.start, &line, src) == KO, 0))
 			return (KO);
 		args[0] = (t_u64)(t_uptr)file_name.mem;
 		args[1] = file_name.size;

@@ -1,7 +1,7 @@
 #include "errors.h"
 
 __attribute__((__cold__, __nonnull__(2), __flatten__, __unused__, __always_inline__))
-inline t_result	lazy_error_state_fill_lines(t_allocator allocator, t_error_state *__restrict__ const state, const t_buffer src)
+inline t_result	pdl__lazy_error_state_fill_lines(t_allocator allocator, t_error_state *__restrict__ const state, const t_buffer src)
 {
 	t_u32a		scan;
 	t_u32a		diff;
@@ -26,7 +26,7 @@ inline t_result	lazy_error_state_fill_lines(t_allocator allocator, t_error_state
 }
 
 __attribute__((__nonnull__(2, 4), __cold__, noinline))
-t_result	line_of_token_lazy_init(
+t_result	pdl_line_of_token_lazy_init(
 		t_allocator								allocator,
 		t_error_state *__restrict__ const		state,
 		t_u32a									offset,
@@ -41,7 +41,7 @@ t_result	line_of_token_lazy_init(
 
 	if (__builtin_expect(state->is_init == false, 0))
 	{
-		if (__builtin_expect(lazy_error_state_fill_lines(allocator, state, src) == KO, 0))
+		if (__builtin_expect(pdl__lazy_error_state_fill_lines(allocator, state, src) == KO, 0))
 			return (KO);
 	}
 	arr = (const t_u32a *)state->line_offsets.buf.mem;

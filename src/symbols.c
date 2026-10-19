@@ -2,14 +2,14 @@
 
 // identifier name of a token, used as the key into the scope maps
 __attribute__((__always_inline__, pure))
-static inline t_buffer	token_name(const t_buffer src,
+static inline t_buffer	pdl__token_name(const t_buffer src,
 	const t_token_body_union *__restrict__ const tokens, t_size idx)
 {
 	return (xft_fatptr(src.mem + tokens[idx].lexeme.start, tokens[idx].lexeme.end - tokens[idx].lexeme.start));
 }
 
 __attribute__((__always_inline__, pure, __returns_nonnull__))
-static inline t_indexmap	*scope_map(const t_symbol_table *__restrict__ const table, t_size scope)
+static inline t_indexmap	*pdl__scope_map(const t_symbol_table *__restrict__ const table, t_size scope)
 {
 	t_scope	*ptr;
 
@@ -19,13 +19,13 @@ static inline t_indexmap	*scope_map(const t_symbol_table *__restrict__ const tab
 }
 
 __attribute__((__always_inline__, const))
-static inline t_size	symbol_to_value(t_symbol sym)
+static inline t_size	pdl__symbol_to_value(t_symbol sym)
 {
 	return ((t_u_sym_32){.sym = sym}.u32);
 }
 
 __attribute__((__always_inline__, const))
-static inline t_symbol	value_to_symbol(t_size value)
+static inline t_symbol	pdl__value_to_symbol(t_size value)
 {
 	return ((t_u_sym_32){.u32 = (t_u32a)value}.sym);
 }
@@ -35,7 +35,7 @@ static inline t_symbol	value_to_symbol(t_size value)
 // @Todo: the parser should never touch the table without a namespace open,
 // once it's tested only the NDEBUG part remains and we can remove this.
 __attribute__((__always_inline__, __flatten__, __unused__))
-static inline void	pin_namespace_open(const t_symbol_table *__restrict__ const table)
+static inline void	pdl__pin_namespace_open(const t_symbol_table *__restrict__ const table)
 {
 #ifndef NDEBUG
 	xft_pin_invariant_msg(table->scope_depth != 0,
@@ -130,7 +130,7 @@ void	pdl_pop_namespace(t_symbol_table *table)
 {
 	t_scope	*top;
 
-	pin_namespace_open(table);
+	pdl__pin_namespace_open(table);
 	table->scope_depth--;
 	top = xft_vec_get_mut(&table->scope_map_array, table->scope_depth, sizeof(t_scope));
 	xft_indexmap_clear(&top->map);
@@ -147,14 +147,14 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 	t_symbol_simple_type							typeof_sym
 )
 {
-	const t_buffer		key = token_name(src, tokens, idx_of_token);
+	const t_buffer		key = pdl__token_name(src, tokens, idx_of_token);
 	t_indexmap			*map;
 	t_simple_attributes	attr;
 	t_size				index;
 
-	pin_namespace_open(table);
+	pdl__pin_namespace_open(table);
 
-	map = scope_map(table, table->scope_depth - 1);
+	map = pdl__scope_map(table, table->scope_depth - 1);
 	index = xft_vec_len(&table->simple_types, sizeof(t_simple_attributes));
 	attr = (t_simple_attributes){
 		.relative_offset = (t_u32a)map->count,
@@ -167,7 +167,7 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 		return (KO);
 
 	if (__builtin_expect(xft_indexmap_insert(allocator, map, key,
-			symbol_to_value((t_symbol){.type = SYMT_SIMPLE, .index_to_dense_array = (t_u32a)index})) == KO, 0))
+			pdl__symbol_to_value((t_symbol){.type = SYMT_SIMPLE, .index_to_dense_array = (t_u32a)index})) == KO, 0))
 	{
 		xft_vec_pop(&table->simple_types, sizeof(t_simple_attributes));
 		return (KO);
@@ -190,7 +190,7 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 	t_size											nargs
 )
 {
-	const t_buffer			key = token_name(src, tokens, idx_of_token);
+	const t_buffer			key = pdl__token_name(src, tokens, idx_of_token);
 	const t_size			arg_start = xft_vec_len(&table->arg_types, sizeof(t_symbol_simple_type));
 	t_indexmap				*map;
 	t_function_attributes	attr;
@@ -202,7 +202,7 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 	xft_pin_invariant_msg(table->scope_depth == 1,
 		xft_fatptr((t_any)ERR_FUNC_NOT_GLOBAL, sizeof(ERR_FUNC_NOT_GLOBAL) - 1));
 
-	map = scope_map(table, 0);
+	map = pdl__scope_map(table, 0);
 	index = xft_vec_len(&table->function_types, sizeof(t_function_attributes));
 	attr = (t_function_attributes){
 		.args = {.start = (t_u32a)arg_start, .end = (t_u32a)(arg_start + nargs)},
@@ -219,7 +219,7 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 		goto rewind_args;
 
 	if (__builtin_expect(xft_indexmap_insert(allocator, map, key,
-			symbol_to_value((t_symbol){.type = SYMT_FUNC, .index_to_dense_array = (t_u32a)index})) == KO, 0))
+			pdl__symbol_to_value((t_symbol){.type = SYMT_FUNC, .index_to_dense_array = (t_u32a)index})) == KO, 0))
 	{
 		xft_vec_pop(&table->function_types, sizeof(t_function_attributes));
 		goto rewind_args;
@@ -244,15 +244,15 @@ t_symbol_lookup_result	pdl_get_symbol_from_current_namespace_up(
 	t_size				it;
 	t_size				result;
 
-	pin_namespace_open(table);
+	pdl__pin_namespace_open(table);
 	// functions only live in namespace 0
 	it = xft_tern(is_function, 1, depth);
 	do
 	{
 		--it;
-		result = xft_indexmap_lookup(scope_map(table, it), name);
+		result = xft_indexmap_lookup(pdl__scope_map(table, it), name);
 		if (__builtin_expect(result != INDEXMAP_NPOS, 1))
-			return ((t_symbol_lookup_result){.is_some = 1, .sym = value_to_symbol(result)});
+			return ((t_symbol_lookup_result){.is_some = 1, .sym = pdl__value_to_symbol(result)});
 	}
 	while (it);
 	return ((t_symbol_lookup_result){.is_some = 0});
@@ -279,7 +279,7 @@ t_result	pdl_dump_current_namespace(
 	t_buffer					name;
 	t_u64						args[2];
 
-	pin_namespace_open(table);
+	pdl__pin_namespace_open(table);
 	scope = xft_vec_get_mut(&table->scope_map_array, table->scope_depth - 1, sizeof(t_scope));
 	if (scope == nullptr) __builtin_unreachable();
 	attrs = (const t_simple_attributes *)table->simple_types.buf.mem;
@@ -290,7 +290,7 @@ t_result	pdl_dump_current_namespace(
 	for (t_size i = scope->simple_mark / sizeof(t_simple_attributes);
 		i < xft_vec_len(&table->simple_types, sizeof(t_simple_attributes)); i++)
 	{
-		name = token_name(src, tokens, attrs[i].tag_idx_token);
+		name = pdl__token_name(src, tokens, attrs[i].tag_idx_token);
 		args[0] = (t_uptr)name.mem;
 		args[1] = name.size;
 		if (xft_fmt_writer(writer, xft_fatptr((t_any)DUMP_LEXEMA, sizeof(DUMP_LEXEMA) - 1), args) == KO)

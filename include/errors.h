@@ -9,7 +9,7 @@ typedef struct s_error_state
 	t_writer	*__restrict__ writer;
 }	t_error_state;
 
-t_result	line_of_token_lazy_init(
+t_result	pdl_line_of_token_lazy_init(
 	t_allocator							allocator,
 	t_error_state	*__restrict__ const	state,
 	t_u32a								offset,

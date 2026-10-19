@@ -88,7 +88,7 @@ enum e_token_soa_field {
 extern const t_soa_context	token_soa_ctx;
 
 __attribute__((__always_inline__, const))
-static inline t_buffer	token_type_to_string(t_token_type tokt)
+static inline t_buffer	pdl_token_type_to_string(t_token_type tokt)
 {
 #define TOKT_STR(s) xft_fatptr((t_any)s, sizeof(s) - 1)
 

@@ -11,14 +11,14 @@ static constexpr char	ERR_SYMBOLS_OOM[] = "ERROR: Cannot allocate symbol table, 
 static constexpr char	ERR_CANNOT_OPEN_OUTFILE[] = "ERROR: Cannot open output file for writing\n";
 
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1, 2)))
-inline static void	report(t_writer *__restrict__ const writer, const char *__restrict__ const msg, const t_size len)
+inline static void	pdl__report(t_writer *__restrict__ const writer, const char *__restrict__ const msg, const t_size len)
 {
 	xft_writer_write(writer, xft_fatptr((t_any)msg, len));
 	xft_writer_flush(writer);
 }
 
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1)))
-inline static void	compiler_destroy(t_compiler_data *__restrict__ const data)
+inline static void	pdl__compiler_destroy(t_compiler_data *__restrict__ const data)
 {
 	if (__builtin_expect(data->src_buf.mem != nullptr, 1))		xft_unmap_file(data->src_buf);
 	if (__builtin_expect(data->err_state.is_init, 0))			xft_vec_destroy(data->allocator, &data->err_state.line_offsets);
@@ -34,28 +34,28 @@ inline static void	compiler_destroy(t_compiler_data *__restrict__ const data)
 }
 
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1, 2)))
-static inline  t_result	compiler_init(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
+static inline  t_result	pdl__compiler_init(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
 {
 	data->gpa = xft_new_gpa();
 	if (__builtin_expect(data->gpa.slab == nullptr, 0))
-		return (report(&data->_stderr, ERR_ALLOC_INIT, sizeof(ERR_ALLOC_INIT) - 1), KO);
+		return (pdl__report(&data->_stderr, ERR_ALLOC_INIT, sizeof(ERR_ALLOC_INIT) - 1), KO);
 	data->allocator = xft_gpa_allocator(&data->gpa);
 
 	data->src_buf = xft_map_file(opts->src_file.mem, O_RDONLY);
 	if (__builtin_expect(data->src_buf.mem == nullptr, 0))
-		return (report(&data->_stderr, ERR_CANNOT_MAP_FILE, sizeof(ERR_CANNOT_MAP_FILE) - 1), KO);
+		return (pdl__report(&data->_stderr, ERR_CANNOT_MAP_FILE, sizeof(ERR_CANNOT_MAP_FILE) - 1), KO);
 
 	data->tokens_soa = xft_new_soa(data->allocator, 512, &token_soa_ctx);
 	if (__builtin_expect(data->tokens_soa.ptr == nullptr, 0))
-		return (report(&data->_stderr, ERR_TOKENS_SOA_OOM, sizeof(ERR_TOKENS_SOA_OOM) - 1), KO);
+		return (pdl__report(&data->_stderr, ERR_TOKENS_SOA_OOM, sizeof(ERR_TOKENS_SOA_OOM) - 1), KO);
 
 	data->symbols = pdl_new_symbol_table(data->allocator);
 	if (__builtin_expect(data->symbols.scope_map_array.buf.mem == nullptr, 0))
-		return (report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
+		return (pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
 
 	// @Todo: no parser yet, so everything goes into a single namespace opened here.
 	if (__builtin_expect(pdl_push_scope(data->allocator, &data->symbols) == KO, 0))
-		return (report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
+		return (pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
 
 	data->err_state.is_init = false;
 	data->err_state.writer = &data->_stderr;
@@ -66,11 +66,11 @@ static inline  t_result	compiler_init(t_compiler_data *__restrict__ const data, 
 
 // lexes the whole file; until the parser exists this also fills the symbol table (the hack)
 __attribute__((__nonnull__(1)))
-static t_result	compiler_run(t_compiler_data *__restrict__ const data)
+static t_result	pdl__compiler_run(t_compiler_data *__restrict__ const data)
 {
 	t_result	result;
 
-	while ((result = lex_next_token(data->allocator, data->src_buf, data->filename, &data->lexer_state,
+	while ((result = pdl_lex_next_token(data->allocator, data->src_buf, data->filename, &data->lexer_state,
 				&data->tokens_soa, &data->err_state)) == OK)
 	{
 		const t_size									last = data->tokens_soa.occupied_elements - 1;
@@ -89,7 +89,7 @@ static t_result	compiler_run(t_compiler_data *__restrict__ const data)
 		if (__builtin_expect(pdl_intern_simple_symbol_to_current_namespace(data->allocator, &data->symbols,
 				tvalues, data->src_buf, last, SYM_INT) == KO, 0))
 		{
-			report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1);
+			pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1);
 			return (KO);
 		}
 	}
@@ -97,7 +97,7 @@ static t_result	compiler_run(t_compiler_data *__restrict__ const data)
 }
 
 __attribute__((__nonnull__(1, 2)))
-inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
+inline static t_result	pdl__compiler_dump(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
 {
 	const t_token_type *__restrict__ const			ttype = xft_soa_fields(&data->tokens_soa, &token_soa_ctx, TOKEN_SOA_TYPE);
 	const t_token_body_union *__restrict__ const	tvalues = xft_soa_fields(&data->tokens_soa, &token_soa_ctx, TOKEN_SOA_AS);
@@ -112,7 +112,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 	{
 		fd = xft_open((const char *)opts->token_file.mem, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (__builtin_expect(fd == -1, 0))
-			return (report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
+			return (pdl__report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
 		out = xft_get_fs_writer(xft_fatptr(buffer, sizeof(buffer)), fd);
 		for (t_size i = 0; i < data->tokens_soa.occupied_elements; i++)
 		{
@@ -120,7 +120,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 			t_u64a					args[4];
 			t_symbol_lookup_result	sym;
 
-			str = token_type_to_string(ttype[i]);
+			str = pdl_token_type_to_string(ttype[i]);
 			args[0] = (t_uptr)str.mem;
 			args[1] = str.size;
 			switch (ttype[i])
@@ -160,7 +160,7 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 	{
 		fd = xft_open((const char *)opts->table_file.mem, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 		if (__builtin_expect(fd == -1, 0))
-			return (report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
+			return (pdl__report(&data->_stderr, ERR_CANNOT_OPEN_OUTFILE, sizeof(ERR_CANNOT_OPEN_OUTFILE) - 1), KO);
 		out = xft_get_fs_writer(xft_fatptr(buffer, sizeof(buffer)), fd);
 		pdl_dump_current_namespace(&out, &data->symbols, tvalues, data->src_buf);
 		xft_writer_flush(&out);
@@ -170,14 +170,14 @@ inline static t_result	compiler_dump(t_compiler_data *__restrict__ const data, c
 }
 
 __attribute__((__nonnull__(1, 2)))
-static t_result	compiler_drive(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
+static t_result	pdl__compiler_drive(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
 {
 	t_result	result;
 
-	result = compiler_init(data, opts);
-	if (__builtin_expect(result == OK, 1)) result = compiler_run(data);
-	if (__builtin_expect(result == OK, 1)) result = compiler_dump(data, opts);
-	compiler_destroy(data);
+	result = pdl__compiler_init(data, opts);
+	if (__builtin_expect(result == OK, 1)) result = pdl__compiler_run(data);
+	if (__builtin_expect(result == OK, 1)) result = pdl__compiler_dump(data, opts);
+	pdl__compiler_destroy(data);
 	return (result);
 }
 
@@ -227,7 +227,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 			case sizeof("--help") - 1:
 			{
 				if (xft_memcmp(ptrs.argv[it], "--help", sizeof("--help") - 1) == 0)
-					report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
+					pdl__report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
 				xft_exit(0);
 			}
 			case sizeof("--tokens") - 1:
@@ -261,7 +261,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 				if (__builtin_expect(opts.src_file.mem == nullptr, 1)) opts.src_file = xft_fatptr(ptrs.argv[it], len);
 				else
 				{
-					report(&data._stderr, ERR_MULTIPLE_SOURCES, sizeof(ERR_MULTIPLE_SOURCES) - 1);
+					pdl__report(&data._stderr, ERR_MULTIPLE_SOURCES, sizeof(ERR_MULTIPLE_SOURCES) - 1);
 					xft_exit(1);
 				}
 		}
@@ -269,17 +269,17 @@ void	xft_main(const t_any *__restrict__ const sp)
 	}
 	if (__builtin_expect(cli != NEUTRAL, 0))
 	{
-		report(&data._stderr, ERR_MISSING_FLAG_VALUE, sizeof(ERR_MISSING_FLAG_VALUE) - 1);
+		pdl__report(&data._stderr, ERR_MISSING_FLAG_VALUE, sizeof(ERR_MISSING_FLAG_VALUE) - 1);
 		xft_exit(1);
 	}
 
 	if (__builtin_expect(opts.src_file.mem == nullptr, 0))
 	{
-		report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
+		pdl__report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
 		xft_exit(1);
 	}
 
-	result = compiler_drive(&data, &opts);
+	result = pdl__compiler_drive(&data, &opts);
 	xft_writer_flush(&data._stderr);
 	xft_exit(result == KO);
 }
