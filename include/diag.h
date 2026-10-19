@@ -20,6 +20,23 @@
 # define DIAG_JUMP_TABLE_END
 #endif
 
+#if defined(__clang__)
+# define DIAG_CASE_RANGE_BEGIN \
+	_Pragma("clang diagnostic push") \
+	_Pragma("clang diagnostic ignored \"-Wc2y-extensions\"")
+# define DIAG_CASE_RANGE_END \
+	_Pragma("clang diagnostic pop")
+#elif defined(__GNUC__)
+# define DIAG_CASE_RANGE_BEGIN \
+	_Pragma("GCC diagnostic push") \
+	_Pragma("GCC diagnostic ignored \"-Wpedantic\"")
+# define DIAG_CASE_RANGE_END \
+	_Pragma("GCC diagnostic pop")
+#else
+# define DIAG_CASE_RANGE_BEGIN
+# define DIAG_CASE_RANGE_END
+#endif
+
 #define DIAG_GOTO(target) \
 	DIAG_JUMP_TABLE_BEGIN \
 	goto *(target); \

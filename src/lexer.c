@@ -151,7 +151,7 @@ whitespace:
 whitespace_scalar:
 
 	// 64 = max len for ids / strings + 8 for possible spaces
-	xft_prefetch_read0((t_cany)src.mem + state->offset, 64 + 8);
+	xft_prefetch_read0((t_cany)(src.mem + state->offset), 64 + 8);
 
 	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
 	dispatched = src.mem[state->offset++];
@@ -308,12 +308,14 @@ whitespace_scalar:
 			if (__builtin_expect(state->offset >= src.size, 0)) goto error_unterminated_string;
 			switch (src.mem[state->offset])
 			{
+DIAG_CASE_RANGE_BEGIN
 				case 0x00 ... 0x1F: // incompatibles
+DIAG_CASE_RANGE_END
 					goto error_string_cannot_contain_unprintable;
 				case '\\':	// "c*\ escape char 
-					t_u32a idx		= xft_tern(state->offset >= src.size, state->offset, state->offset + 1);
-					t_u32a mask 	= xft_tern(state->offset >= src.size, 0, ~0);
-					t_u8 c			= src.mem[idx] & mask;
+					t_u32a idx		= (t_u32a)xft_tern(state->offset >= src.size, state->offset, state->offset + 1);
+					t_u32a mask_ 	= (t_u32a)xft_tern(state->offset >= src.size, 0, ~0);
+					t_u8 c			= src.mem[idx] & mask_;
 					t_u8 is_escaped	= !!(	(c == '\\')
 										|	(c == 'n')
 										|	(c == 't')
@@ -328,7 +330,9 @@ whitespace_scalar:
 					tok.as.lexeme.end = state->offset++; // leer
 					if (__builtin_expect((tok.as.lexeme.end - tok.as.lexeme.start) - compound_elements > 64, 0)) goto strlit_too_big;
 					goto success; // Generar token
+DIAG_CASE_RANGE_BEGIN
 				case 0x80 ... 0xFF: __attribute__((__fallthrough__));
+DIAG_CASE_RANGE_END
 				default:
 					++state->offset; // leer
 			}
