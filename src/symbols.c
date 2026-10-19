@@ -258,6 +258,10 @@ t_symbol_lookup_result	pdl_get_symbol_from_current_namespace_up(
 	return ((t_symbol_lookup_result){.is_some = 0});
 }
 
+
+// @TODO: this is only for the first assignment hack, once we have a proper parser
+// we then can do a proper dumper.
+
 #define DUMP_HEADER "#%q\n"
 #define DUMP_LEXEMA "+LEXEMA:'%s'\n"
 
