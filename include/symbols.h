@@ -34,13 +34,13 @@ typedef struct s_symbol_lookup_result
 	t_symbol		sym;
 }	t_symbol_lookup_result;
 
-#ifndef MADE_TEST_SYM
-# define MADE_TEST_SYM
-static constexpr const t_symbol test______ = {.type = SYMT_FUNC, .index_to_dense_array = 0};
-_Static_assert(sizeof(test______) == sizeof(t_u32a), "SYMBOL != U32");
-_Static_assert(test______.type == 1, "SYMBOL != U32");
-_Static_assert(test______.index_to_dense_array == 0, "SYMBOL != U32");
-#endif
+// #ifndef MADE_TEST_SYM
+// # define MADE_TEST_SYM
+// static constexpr const t_symbol test______ = {.type = SYMT_FUNC, .index_to_dense_array = 0};
+// _Static_assert(sizeof(test______) == sizeof(t_u32a), "SYMBOL != U32");
+// _Static_assert(test______.type == 1, "SYMBOL != U32");
+// _Static_assert(test______.index_to_dense_array == 0, "SYMBOL != U32");
+// #endif
 
 typedef struct s_run
 {

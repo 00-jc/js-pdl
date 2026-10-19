@@ -120,7 +120,7 @@ t_result	pdl_push_scope(t_allocator allocator, t_symbol_table *table)
 	}
 	top = xft_vec_get_mut(&table->scope_map_array, table->scope_depth, sizeof(t_scope));
 	if (top == nullptr) __builtin_unreachable();
-	top->simple_mark = table->simple_types.size;
+	top->simple_mark = (t_u32a)table->simple_types.size;
 	table->scope_depth++;
 	return (OK);
 }
@@ -157,8 +157,8 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 	map = scope_map(table, table->scope_depth - 1);
 	index = xft_vec_len(&table->simple_types, sizeof(t_simple_attributes));
 	attr = (t_simple_attributes){
-		.relative_offset = map->count,
-		.tag_idx_token = idx_of_token,
+		.relative_offset = (t_u32a)map->count,
+		.tag_idx_token = (t_u32a)idx_of_token,
 		.type = typeof_sym,
 	};
 
@@ -167,7 +167,7 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 		return (KO);
 
 	if (__builtin_expect(xft_indexmap_insert(allocator, map, key,
-			symbol_to_value((t_symbol){.type = SYMT_SIMPLE, .index_to_dense_array = index})) == KO, 0))
+			symbol_to_value((t_symbol){.type = SYMT_SIMPLE, .index_to_dense_array = (t_u32a)index})) == KO, 0))
 	{
 		xft_vec_pop(&table->simple_types, sizeof(t_simple_attributes));
 		return (KO);
@@ -205,8 +205,8 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 	map = scope_map(table, 0);
 	index = xft_vec_len(&table->function_types, sizeof(t_function_attributes));
 	attr = (t_function_attributes){
-		.args = {.start = arg_start, .end = arg_start + nargs},
-		.tag_idx_token = idx_of_token,
+		.args = {.start = (t_u32a)arg_start, .end = (t_u32a)(arg_start + nargs)},
+		.tag_idx_token = (t_u32a)idx_of_token,
 		.return_type = return_type,
 	};
 
@@ -219,7 +219,7 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 		goto rewind_args;
 
 	if (__builtin_expect(xft_indexmap_insert(allocator, map, key,
-			symbol_to_value((t_symbol){.type = SYMT_FUNC, .index_to_dense_array = index})) == KO, 0))
+			symbol_to_value((t_symbol){.type = SYMT_FUNC, .index_to_dense_array = (t_u32a)index})) == KO, 0))
 	{
 		xft_vec_pop(&table->function_types, sizeof(t_function_attributes));
 		goto rewind_args;

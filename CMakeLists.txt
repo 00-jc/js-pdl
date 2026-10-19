@@ -13,16 +13,9 @@ option(LEXER_USE_SIMD "Use the SIMD lexer (src/lexer_simd.c)" OFF)
 
 add_executable(js-pdl)
 
-if(LEXER_USE_SIMD)
-    set(LEXER_SOURCE src/lexer_simd.c)
-    target_compile_definitions(js-pdl PRIVATE LEXER_USE_SIMD)
-else()
-    set(LEXER_SOURCE src/lexer.c)
-endif()
-
 target_sources(js-pdl PRIVATE
     src/entry_point.c
-    ${LEXER_SOURCE}
+	src/lexer.c
     src/errors.c
     src/symbols.c
 )
