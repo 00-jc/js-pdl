@@ -32,22 +32,22 @@ static const uint64_t TABLE[] = {
         [4  ] = 0x6E6F6974636E7566, // function
         [1  ] = 0x0000000000006F64, // do
 
-		[KW_TYPE_START + 0]  = TOK_WHILE,
-		[KW_TYPE_START + 1]  = TOK_ECHO,
-		[KW_TYPE_START + 2]  = TOK_IDENTIFIER,
-		[KW_TYPE_START + 3]  = TOK_FLOAT,
-		[KW_TYPE_START + 4]  = TOK_IF,
-		[KW_TYPE_START + 5]  = TOK_FALSE,
-		[KW_TYPE_START + 6]  = TOK_PROMPT,
-		[KW_TYPE_START + 7]  = TOK_BOOL,
-		[KW_TYPE_START + 8]  = TOK_VOID,
-		[KW_TYPE_START + 9]  = TOK_RETURN,
-		[KW_TYPE_START + 10] = TOK_STRING,
-		[KW_TYPE_START + 11] = TOK_INT,
-		[KW_TYPE_START + 12] = TOK_TRUE,
-		[KW_TYPE_START + 13] = TOK_LET,
-		[KW_TYPE_START + 14] = TOK_FUNC,
-		[KW_TYPE_START + 15] = TOK_DO,
+		[KW_TYPE_START + 0 ] = TOK_VOID,
+		[KW_TYPE_START + 1 ] = TOK_DO,
+		[KW_TYPE_START + 2 ] = TOK_WHILE,
+		[KW_TYPE_START + 3 ] = TOK_STRING,
+		[KW_TYPE_START + 4 ] = TOK_FUNC,
+		[KW_TYPE_START + 5 ] = TOK_RETURN,
+		[KW_TYPE_START + 6 ] = TOK_FALSE,
+		[KW_TYPE_START + 7 ] = TOK_ECHO,
+		[KW_TYPE_START + 8 ] = TOK_LET,
+		[KW_TYPE_START + 9 ] = TOK_IF,
+		[KW_TYPE_START + 10] = TOK_TRUE,
+		[KW_TYPE_START + 11] = TOK_PROMPT,
+		[KW_TYPE_START + 12] = TOK_BOOL,
+		[KW_TYPE_START + 13] = TOK_IDENTIFIER,
+		[KW_TYPE_START + 14] = TOK_FLOAT,
+		[KW_TYPE_START + 15] = TOK_INT,
 };
 #ifdef __GNUC__
 __attribute__((__always_inline__, const, __flatten__, __unused__))
