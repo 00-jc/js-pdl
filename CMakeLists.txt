@@ -9,8 +9,6 @@ set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "" FORCE)
 
 add_subdirectory(xft)
 
-option(LEXER_USE_SIMD "Use the SIMD lexer (src/lexer_simd.c)" OFF)
-
 add_executable(js-pdl)
 
 target_sources(js-pdl PRIVATE

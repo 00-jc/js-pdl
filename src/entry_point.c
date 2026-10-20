@@ -36,6 +36,7 @@ inline static void	pdl__compiler_destroy(t_compiler_data *__restrict__ const dat
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1, 2)))
 static inline  t_result	pdl__compiler_init(t_compiler_data *__restrict__ const data, const t_compiler_options *__restrict__ const opts)
 {
+	data->err_state.is_init = false;
 	data->gpa = xft_new_gpa();
 	if (__builtin_expect(data->gpa.slab == nullptr, 0))
 		return (pdl__report(&data->_stderr, ERR_ALLOC_INIT, sizeof(ERR_ALLOC_INIT) - 1), KO);
@@ -57,7 +58,6 @@ static inline  t_result	pdl__compiler_init(t_compiler_data *__restrict__ const d
 	if (__builtin_expect(pdl_push_scope(data->allocator, &data->symbols) == KO, 0))
 		return (pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
 
-	data->err_state.is_init = false;
 	data->err_state.writer = &data->_stderr;
 	data->lexer_state = (t_lexer_state){.offset = 0};
 	data->filename = opts->src_file;
@@ -227,8 +227,10 @@ void	xft_main(const t_any *__restrict__ const sp)
 			case sizeof("--help") - 1:
 			{
 				if (xft_memcmp(ptrs.argv[it], "--help", sizeof("--help") - 1) == 0)
+				{
 					pdl__report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
-				xft_exit(0);
+					xft_exit(0);
+				}
 			}
 			case sizeof("--tokens") - 1:
 			{
