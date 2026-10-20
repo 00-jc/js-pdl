@@ -27,6 +27,9 @@ constexpr
 #endif
 static inline unsigned __int128
 representative_bits_hash(unsigned __int128 input)
+#ifdef __cplusplus
+noexcept
+#endif
 {
   unsigned __int128 result = 0;
 
@@ -43,3 +46,12 @@ static const unsigned __int128 TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
 };
 #undef FBHC_U128
 #undef FBHC_CONSTEXPR
+
+typedef enum e_cli_flag
+{
+	FLAG_HELP		= 0,
+	FLAG_AST		= 1,
+	FLAG_TOKENS		= 2,
+	FLAG_SYMBOLS	= 3,
+	FLAG_NON		= 4,
+}	t_cli_flag;

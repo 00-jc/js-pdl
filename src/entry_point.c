@@ -11,15 +11,6 @@ static constexpr char	ERR_TOKENS_SOA_OOM[] = "ERROR: Cannot allocate token stora
 static constexpr char	ERR_SYMBOLS_OOM[] = "ERROR: Cannot allocate symbol table, most likely OOM\n";
 static constexpr char	ERR_CANNOT_OPEN_OUTFILE[] = "ERROR: Cannot open output file for writing\n";
 
-typedef enum e_cli_flag
-{
-	FLAG_HELP,
-	FLAG_AST,
-	FLAG_TOKENS,
-	FLAG_SYMBOLS,
-	FLAG_NONE,
-}	t_cli_flag;
-
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1), __pure__))
 inline static unsigned __int128	pdl__pack_arg(const t_nat_str *__restrict__ const arg, const t_size len)
 {
