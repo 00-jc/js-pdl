@@ -129,7 +129,7 @@ inline static t_result	pdl__compiler_dump(t_compiler_data *__restrict__ const da
 					str = xft_fatptr(data->src_buf.mem + tvalues[i].lexeme.start, tvalues[i].lexeme.end - tvalues[i].lexeme.start);
 					sym = pdl_get_symbol_from_current_namespace_up(&data->symbols, str, false);
 
-					if (__builtin_expect(sym.is_some = 0, 0)) __builtin_trap(); // just a hack for now
+					if (__builtin_expect(sym.is_some == 0, 0)) __builtin_trap(); // just a hack for now
 
 					args[2] = (t_u_sym_32){.sym = sym.sym}.u32;
 					xft_fmt_writer(&out, xft_fatptr((t_any)"<%s, %q>\n", sizeof("<%s, %q>\n") - 1), (t_any)&args);
