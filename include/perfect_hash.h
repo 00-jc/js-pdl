@@ -11,6 +11,9 @@
  * ============================================================
  */
 
+// i had to edit this by hand to add the second half of the table
+// fbhc is not there yet
+
 #include <stdint.h>
 #include "tokens.h"
 
