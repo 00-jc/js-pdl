@@ -194,7 +194,7 @@ whitespace:
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
 		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
-			xft_prefetch_read0(TABLE_FIB, (KW_TYPE_START + 15) * sizeof(t_u64));
+			xft_prefetch_read0(TABLE_REPR, (KW_TYPE_START + REPRESENTATIVE_TABLE_SIZE) * sizeof(t_u64));
 
 			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
 			// so i'll do a overlap load myself.
@@ -217,8 +217,8 @@ whitespace:
 			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + offset)) << (offset << 3);
 
 			x = xft_from_le64(x);
-			t_u32a hash = fib_hash(x);
-			tok.type = (t_token_type)xft_tern(TABLE_FIB[hash] == x, TABLE_FIB[KW_TYPE_START + hash], TOK_IDENTIFIER);
+			t_u32a hash = representative_bits_hash(x);
+			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_REPR[KW_TYPE_START + hash], TOK_IDENTIFIER);
 		}
 		goto success; // Generar token
 	}

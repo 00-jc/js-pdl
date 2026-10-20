@@ -17,47 +17,13 @@
 #include <stdint.h>
 #include "tokens.h"
 
-#define KW_TYPE_START 16
+#define KW_TYPE_START 32
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) || defined(__cplusplus)
 # define FBHC_CONSTEXPR constexpr
 #else
-# define FBHC_CONSTEXPR
+# define FBHC_CONSTEXPR const
 #endif
-static const uint64_t TABLE_FIB[] = {
-        [2  ] = 0x000000656C696877, // while
-        [7  ] = 0x000000006F686365, // echo
-        [14 ] = 0x00000074616F6C66, // float
-        [9  ] = 0x0000000000006669, // if
-        [6  ] = 0x00000065736C6166, // false
-        [11 ] = 0x000074706D6F7270, // prompt
-        [12 ] = 0x006E61656C6F6F62, // boolean
-        [0  ] = 0x0000000064696F76, // void
-        [5  ] = 0x00006E7275746572, // return
-        [3  ] = 0x0000676E69727473, // string
-        [15 ] = 0x0000000000746E69, // int
-        [10 ] = 0x0000000065757274, // true
-        [8  ] = 0x000000000074656C, // let
-        [4  ] = 0x6E6F6974636E7566, // function
-        [1  ] = 0x0000000000006F64, // do
-
-	    [KW_TYPE_START + 0 ] = TOK_VOID,
-	    [KW_TYPE_START + 1 ] = TOK_DO,
-	    [KW_TYPE_START + 2 ] = TOK_WHILE,
-	    [KW_TYPE_START + 3 ] = TOK_STRING,
-	    [KW_TYPE_START + 4 ] = TOK_FUNC,
-	    [KW_TYPE_START + 5 ] = TOK_RETURN,
-	    [KW_TYPE_START + 6 ] = TOK_FALSE,
-	    [KW_TYPE_START + 7 ] = TOK_ECHO,
-	    [KW_TYPE_START + 8 ] = TOK_LET,
-	    [KW_TYPE_START + 9 ] = TOK_IF,
-	    [KW_TYPE_START + 10] = TOK_TRUE,
-	    [KW_TYPE_START + 11] = TOK_PROMPT,
-	    [KW_TYPE_START + 12] = TOK_BOOL,
-	    [KW_TYPE_START + 13] = TOK_IDENTIFIER,
-	    [KW_TYPE_START + 14] = TOK_FLOAT,
-	    [KW_TYPE_START + 15] = TOK_INT,
-};
 #ifdef __GNUC__
 __attribute__((__always_inline__, const, __flatten__, __unused__))
 #endif
@@ -65,11 +31,55 @@ __attribute__((__always_inline__, const, __flatten__, __unused__))
 constexpr
 #endif
 static inline uint64_t
-fib_hash(uint64_t input)
+representative_bits_hash(uint64_t input)
 #ifdef __cplusplus
 noexcept
 #endif
 {
-  return ((input * 0xF395CA4EF2D38ABB) >> 60);
+  uint64_t result = 0;
+
+#if (defined(__BMI2__) && defined(__x86_64__)) && defined(__has_builtin) && defined(__GNUC__) && __has_builtin(__builtin_ia32_pext_di) && !defined(__znver1__) && !defined(__znver2__)
+result = __builtin_ia32_pext_di((uint64_t)input, 0x4020803);
+#else
+  result |= ((input >> 0) & 0x3) << 0;
+  result |= ((input >> 11) & 0x1) << 2;
+  result |= ((input >> 17) & 0x1) << 3;
+  result |= ((input >> 26) & 0x1) << 4;
+#endif
+  return result;
 }
+static FBHC_CONSTEXPR uint64_t REPRESENTATIVE_TABLE_SIZE = 32;
+static const uint64_t TABLE_REPR[KW_TYPE_START + REPRESENTATIVE_TABLE_SIZE] = {
+	[23 ] = 0x000000656C696877, // while
+	[17 ] = 0x000000006F686365, // echo
+	[14 ] = 0x00000074616F6C66, // float
+	[1  ] = 0x0000000000006669, // if
+	[2  ] = 0x00000065736C6166, // false
+	[24 ] = 0x000074706D6F7270, // prompt
+	[30 ] = 0x006E61656C6F6F62, // boolean
+	[22 ] = 0x0000000064696F76, // void
+	[18 ] = 0x00006E7275746572, // return
+	[11 ] = 0x0000676E69727473, // string
+	[5  ] = 0x0000000000746E69, // int
+	[16 ] = 0x0000000065757274, // true
+	[0  ] = 0x000000000074656C, // let
+	[10 ] = 0x6E6F6974636E7566, // function
+	[4  ] = 0x0000000000006F64, // do
+
+	[KW_TYPE_START + 23] = TOK_WHILE,
+	[KW_TYPE_START + 17] = TOK_ECHO,
+	[KW_TYPE_START + 14] = TOK_FLOAT,
+	[KW_TYPE_START + 1 ] = TOK_IF,
+	[KW_TYPE_START + 2 ] = TOK_FALSE,
+	[KW_TYPE_START + 24] = TOK_PROMPT,
+	[KW_TYPE_START + 30] = TOK_BOOL,
+	[KW_TYPE_START + 22] = TOK_VOID,
+	[KW_TYPE_START + 18] = TOK_RETURN,
+	[KW_TYPE_START + 11] = TOK_STRING,
+	[KW_TYPE_START + 5 ] = TOK_INT,
+	[KW_TYPE_START + 16] = TOK_TRUE,
+	[KW_TYPE_START + 0 ] = TOK_LET,
+	[KW_TYPE_START + 10] = TOK_FUNC,
+	[KW_TYPE_START + 4 ] = TOK_DO,
+};
 #undef FBHC_CONSTEXPR

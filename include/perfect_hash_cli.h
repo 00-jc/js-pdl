@@ -16,7 +16,7 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) || defined(__cplusplus)
 # define FBHC_CONSTEXPR constexpr
 #else
-# define FBHC_CONSTEXPR
+# define FBHC_CONSTEXPR const
 #endif
 #define FBHC_U128(hi, lo) ((((unsigned __int128)(hi)) << 64) | (unsigned __int128)(lo))
 #ifdef __GNUC__
@@ -33,16 +33,20 @@ noexcept
 {
   unsigned __int128 result = 0;
 
+#if (defined(__BMI2__) && defined(__x86_64__)) && defined(__has_builtin) && defined(__GNUC__) && __has_builtin(__builtin_ia32_pext_di) && !defined(__znver1__) && !defined(__znver2__)
+result = (unsigned __int128)__builtin_ia32_pext_di((uint64_t)input, 0x110000);
+#else
   result |= ((input >> 16) & FBHC_U128(0x0, 0x1)) << 0;
   result |= ((input >> 20) & FBHC_U128(0x0, 0x1)) << 1;
+#endif
   return result;
 }
-static const FBHC_CONSTEXPR uint64_t REPRESENTATIVE_TABLE_SIZE = 4;
+static FBHC_CONSTEXPR uint64_t REPRESENTATIVE_TABLE_SIZE = 4;
 static const unsigned __int128 TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
-        [2  ] = FBHC_U128(0x0000000000000000, 0x736E656B6F742D2D), // --tokens
-        [1  ] = FBHC_U128(0x0000000000000000, 0x0000007473612D2D), // --ast
-        [3  ] = FBHC_U128(0x0000000000000073, 0x6C6F626D79732D2D), // --symbols
-        [0  ] = FBHC_U128(0x0000000000000000, 0x0000706C65682D2D), // --help
+	[2  ] = FBHC_U128(0x0000000000000000, 0x736E656B6F742D2D), // --tokens
+	[1  ] = FBHC_U128(0x0000000000000000, 0x0000007473612D2D), // --ast
+	[3  ] = FBHC_U128(0x0000000000000073, 0x6C6F626D79732D2D), // --symbols
+	[0  ] = FBHC_U128(0x0000000000000000, 0x0000706C65682D2D), // --help
 };
 #undef FBHC_U128
 #undef FBHC_CONSTEXPR
@@ -53,5 +57,5 @@ typedef enum e_cli_flag
 	FLAG_AST		= 1,
 	FLAG_TOKENS		= 2,
 	FLAG_SYMBOLS	= 3,
-	FLAG_NON		= 4,
+	FLAG_NONE		= 4,
 }	t_cli_flag;
