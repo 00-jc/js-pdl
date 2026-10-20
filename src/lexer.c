@@ -75,7 +75,7 @@ static inline t_f64a		pdl__interpret_decimal_part(const t_u8 *__restrict__ const
 	return value;
 }
 
-__attribute__((noinline, __nonnull__(4, 5, 6), __hot__))
+__attribute__((noinline, __nonnull__(4, 5, 6), __hot__, __flatten__))
 t_result	pdl_lex_next_token(
 	t_allocator							allocator,
 	const t_buffer						src,
