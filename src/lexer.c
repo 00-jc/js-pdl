@@ -172,7 +172,7 @@ whitespace:
 
 		// [a-zA-Z_][a-zA-Z0-9_]+
 		mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_')) >> lane;
-		state->offset = tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane); // leer
+		state->offset = (t_u32a)(tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane)); // leer
 		while (mask == 0 && (rem = src.size - state->offset) != 0)
 		{
 			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
@@ -217,7 +217,7 @@ whitespace:
 			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + offset)) << (offset << 3);
 
 			x = xft_from_le64(x);
-			t_u32a hash = representative_bits_hash(x);
+			t_u32a hash = (t_u32a)representative_bits_hash(x);
 			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_REPR[KW_TYPE_START + hash], TOK_IDENTIFIER);
 		}
 		goto success; // Generar token
