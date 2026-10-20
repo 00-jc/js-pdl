@@ -1,5 +1,6 @@
 #include <xft.h>
 #include "js-pdl.h"
+#include "perfect_hash_cli.h"
 
 static constexpr char	ERR_USAGE[] = "usage: <exe> <file.js> [--tokens <out>] [--symbols <out>] [--ast <out>]\n";
 static constexpr char	ERR_MULTIPLE_SOURCES[] = "ERROR: multiple source files listed, run --help for cli interface\n";
@@ -9,6 +10,28 @@ static constexpr char	ERR_CANNOT_MAP_FILE[] = "ERROR: Cannot map source file, ch
 static constexpr char	ERR_TOKENS_SOA_OOM[] = "ERROR: Cannot allocate token storage, most likely OOM\n";
 static constexpr char	ERR_SYMBOLS_OOM[] = "ERROR: Cannot allocate symbol table, most likely OOM\n";
 static constexpr char	ERR_CANNOT_OPEN_OUTFILE[] = "ERROR: Cannot open output file for writing\n";
+
+typedef enum e_cli_flag
+{
+	FLAG_HELP,
+	FLAG_AST,
+	FLAG_TOKENS,
+	FLAG_SYMBOLS,
+	FLAG_NONE,
+}	t_cli_flag;
+
+__attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1), __pure__))
+inline static unsigned __int128	pdl__pack_arg(const t_nat_str *__restrict__ const arg, const t_size len)
+{
+	const t_u8			mid		= (t_u8)xft_tern(7 < len, 4, 0);
+	const t_u8			tail	= (t_u8)(len - 4);
+	unsigned __int128	x		= 0;
+
+	x |= *(const t_u32 *__restrict__ const)arg;
+	x |= (unsigned __int128)(*(const t_u32 *__restrict__ const)(arg + mid)) << (mid << 3);
+	x |= (unsigned __int128)(*(const t_u32 *__restrict__ const)(arg + tail)) << (tail << 3);
+	return (x);
+}
 
 __attribute__((__flatten__, __always_inline__, __unused__, __nonnull__(1, 2)))
 inline static void	pdl__report(t_writer *__restrict__ const writer, const char *__restrict__ const msg, const t_size len)
@@ -190,6 +213,7 @@ void	xft_main(const t_any *__restrict__ const sp)
 	t_size						it;
 	t_size						len;
 	t_compiler_cli				cli;
+	t_cli_flag					flag;
 	t_result					result;
 
 	ptrs = xft_get_kernel_ptrs(sp);
@@ -222,41 +246,37 @@ void	xft_main(const t_any *__restrict__ const sp)
 				continue;
 			}
 		}
-		switch (len)
+		flag = FLAG_NONE;
+		if (len - 5 < 5) // (len >= 5 && len <= 9)
 		{
-			case sizeof("--help") - 1:
+			const unsigned __int128	x = pdl__pack_arg(ptrs.argv[it], len);
+			const t_u32a			idx = (t_u32a)representative_bits_hash(x);
+
+			flag = (t_cli_flag)xft_tern(TABLE_REPR[idx] == x, idx, FLAG_NONE);
+		}
+		switch (flag)
+		{
+			case FLAG_HELP:
 			{
-				if (xft_memcmp(ptrs.argv[it], "--help", sizeof("--help") - 1) == 0)
-				{
-					pdl__report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
-					xft_exit(0);
-				}
+				pdl__report(&data._stderr, ERR_USAGE, sizeof(ERR_USAGE) - 1);
+				xft_exit(0);
 			}
-			case sizeof("--tokens") - 1:
+			case FLAG_TOKENS:
 			{
-				if (xft_memcmp(ptrs.argv[it], "--tokens", sizeof("--tokens") - 1) == 0)
-				{
-					opts.dump_tokens = true;
-					cli = EXPECT_TOKEN_FILE;
-				}
+				opts.dump_tokens = true;
+				cli = EXPECT_TOKEN_FILE;
 				break;
 			}
-			case sizeof("--symbols") - 1:
+			case FLAG_SYMBOLS:
 			{
-				if (xft_memcmp(ptrs.argv[it], "--symbols", sizeof("--symbols") - 1) == 0)
-				{
-					opts.dump_tables = true;
-					cli = EXPECT_TABLE_FILE;
-				}
+				opts.dump_tables = true;
+				cli = EXPECT_TABLE_FILE;
 				break;
 			}
-			case sizeof("--ast") - 1:
+			case FLAG_AST:
 			{
-				if (xft_memcmp(ptrs.argv[it], "--ast", sizeof("--ast") - 1) == 0)
-				{
-					opts.dump_ast = true;
-					cli = EXPECT_AST_FILE;
-				}
+				opts.dump_ast = true;
+				cli = EXPECT_AST_FILE;
 				break;
 			}
 			default:
