@@ -1,6 +1,7 @@
 #include <xft.h>
 #include "diag.h"
 #include "lexer.h"
+#include "perfect_hash.h"
 
 DIAG_FAM_INIT_BEGIN
 const t_soa_context	token_soa_ctx = {
@@ -84,53 +85,6 @@ t_result	pdl_lex_next_token(
 	t_error_state	*__restrict__ const	error_state
 )
 {
-
-	#define KW_MAGIC 0x1fb2e0cfcf4095cbull
-	#define KW_HASH(x) ((t_u32)(((x) * KW_MAGIC) >> 60))
-	#define KW_TYPE_START 16
-	// used: https://codeberg.org/00jc/repr (for the little endiand representation of the kws)
-	//
-	// mix the type table and the key tables,
-	// since it's just identifiers a relative load
-	// is cheaper and we can also bring it into L1
-	// with less hassle.
-	static const t_u64 kw_table[32] =
-	{
-		[0]  = 0x656C696877,         // while
-		[1]  = 0x6F686365,           // echo
-		[3]  = 0x74616F6C66,         // float
-		[4]  = 0x6669,               // if
-		[5]  = 0x65736C6166,         // false
-		[6]  = 0x74706D6F7270,       // prompt
-		[7]  = 0x6E61656C6F6F62,     // boolean
-		[8]  = 0x64696F76,           // void
-		[9]  = 0x6E7275746572,       // return
-		[10] = 0x676E69727473,       // string
-		[11] = 0x746E69,             // int
-		[12] = 0x65757274,           // true
-		[13] = 0x74656C,             // let
-		[14] = 0x6E6F6974636E7566,   // function
-		[15] = 0x6F64,               // do
-
-		[KW_TYPE_START + 0]  = TOK_WHILE,
-		[KW_TYPE_START + 1]  = TOK_ECHO,
-		[KW_TYPE_START + 2]  = TOK_IDENTIFIER,
-		[KW_TYPE_START + 3]  = TOK_FLOAT,
-		[KW_TYPE_START + 4]  = TOK_IF,
-		[KW_TYPE_START + 5]  = TOK_FALSE,
-		[KW_TYPE_START + 6]  = TOK_PROMPT,
-		[KW_TYPE_START + 7]  = TOK_BOOL,
-		[KW_TYPE_START + 8]  = TOK_VOID,
-		[KW_TYPE_START + 9]  = TOK_RETURN,
-		[KW_TYPE_START + 10] = TOK_STRING,
-		[KW_TYPE_START + 11] = TOK_INT,
-		[KW_TYPE_START + 12] = TOK_TRUE,
-		[KW_TYPE_START + 13] = TOK_LET,
-		[KW_TYPE_START + 14] = TOK_FUNC,
-		[KW_TYPE_START + 15] = TOK_DO,
-	};
-
-
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;
@@ -240,7 +194,7 @@ whitespace:
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
 		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
-			xft_prefetch_read0(kw_table, (KW_TYPE_START + 15) * sizeof(t_u64));
+			xft_prefetch_read0(TABLE, (KW_TYPE_START + 15) * sizeof(t_u64));
 
 			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
 			// so i'll do a overlap load myself.
@@ -263,8 +217,8 @@ whitespace:
 			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + offset)) << (offset << 3);
 
 			x = xft_from_le64(x);
-			t_u32a hash = KW_HASH(x);
-			tok.type = (t_token_type)xft_tern(kw_table[hash] == x, kw_table[KW_TYPE_START + hash], TOK_IDENTIFIER);
+			t_u32a hash = fib_hash(x);
+			tok.type = (t_token_type)xft_tern(TABLE[hash] == x, TABLE[KW_TYPE_START + hash], TOK_IDENTIFIER);
 		}
 		goto success; // Generar token
 	}
