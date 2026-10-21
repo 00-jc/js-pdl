@@ -107,6 +107,8 @@ whitespace:
 
 	// 64 = max len for ids / strings + 8 for possible spaces
 	xft_prefetch_read0((t_cany)(src.mem + state->offset), 64 + 8);
+	xft_prefetch_read0(TABLE_REPR, REPRESENTATIVE_TABLE_SIZE * sizeof(t_u64));
+	xft_prefetch_read0(TABLE_TOKS, REPRESENTATIVE_TABLE_SIZE);
 
 	do
 	{
@@ -195,8 +197,6 @@ whitespace:
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
 		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
-			xft_prefetch_read0(TABLE_REPR, (KW_TYPE_START + REPRESENTATIVE_TABLE_SIZE) * sizeof(t_u64));
-
 			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
 			// so i'll do a overlap load myself.
 			//
@@ -219,7 +219,7 @@ whitespace:
 
 			x = xft_from_le64(x);
 			t_u32a hash = (t_u32a)representative_bits_hash(x);
-			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_REPR[KW_TYPE_START + hash], TOK_IDENTIFIER);
+			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_TOKS[hash], TOK_IDENTIFIER);
 		}
 		goto success; // Generar token
 	}

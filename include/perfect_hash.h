@@ -17,8 +17,6 @@
 #include <stdint.h>
 #include "tokens.h"
 
-#define KW_TYPE_START 32
-
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) || defined(__cplusplus)
 # define FBHC_CONSTEXPR constexpr
 #else
@@ -49,7 +47,7 @@ result = __builtin_ia32_pext_di((uint64_t)input, 0x4020803);
   return result;
 }
 static FBHC_CONSTEXPR uint64_t REPRESENTATIVE_TABLE_SIZE = 32;
-static const uint64_t TABLE_REPR[KW_TYPE_START + REPRESENTATIVE_TABLE_SIZE] = {
+static const uint64_t TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
 	[23 ] = 0x000000656C696877, // while
 	[17 ] = 0x000000006F686365, // echo
 	[14 ] = 0x00000074616F6C66, // float
@@ -65,21 +63,24 @@ static const uint64_t TABLE_REPR[KW_TYPE_START + REPRESENTATIVE_TABLE_SIZE] = {
 	[0  ] = 0x000000000074656C, // let
 	[10 ] = 0x6E6F6974636E7566, // function
 	[4  ] = 0x0000000000006F64, // do
-
-	[KW_TYPE_START + 23] = TOK_WHILE,
-	[KW_TYPE_START + 17] = TOK_ECHO,
-	[KW_TYPE_START + 14] = TOK_FLOAT,
-	[KW_TYPE_START + 1 ] = TOK_IF,
-	[KW_TYPE_START + 2 ] = TOK_FALSE,
-	[KW_TYPE_START + 24] = TOK_PROMPT,
-	[KW_TYPE_START + 30] = TOK_BOOL,
-	[KW_TYPE_START + 22] = TOK_VOID,
-	[KW_TYPE_START + 18] = TOK_RETURN,
-	[KW_TYPE_START + 11] = TOK_STRING,
-	[KW_TYPE_START + 5 ] = TOK_INT,
-	[KW_TYPE_START + 16] = TOK_TRUE,
-	[KW_TYPE_START + 0 ] = TOK_LET,
-	[KW_TYPE_START + 10] = TOK_FUNC,
-	[KW_TYPE_START + 4 ] = TOK_DO,
 };
+
+const static t_token_type	TABLE_TOKS[] = {
+	[23] = TOK_WHILE,
+	[17] = TOK_ECHO,
+	[14] = TOK_FLOAT,
+	[1 ] = TOK_IF,
+	[2 ] = TOK_FALSE,
+	[24] = TOK_PROMPT,
+	[30] = TOK_BOOL,
+	[22] = TOK_VOID,
+	[18] = TOK_RETURN,
+	[11] = TOK_STRING,
+	[5 ] = TOK_INT,
+	[16] = TOK_TRUE,
+	[0 ] = TOK_LET,
+	[10] = TOK_FUNC,
+	[4 ] = TOK_DO,
+};
+
 #undef FBHC_CONSTEXPR
