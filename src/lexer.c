@@ -99,6 +99,7 @@ t_result	pdl_lex_next_token(
 	t_u32a		point;
 
 	if (src.mem == nullptr) __builtin_unreachable();
+	if (state->offset > src.size) __builtin_unreachable();
 
 whitespace:
 	tok.type			= TOK_EOF;
