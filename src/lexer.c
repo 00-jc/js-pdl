@@ -273,7 +273,7 @@ DIAG_CASE_RANGE_BEGIN
 DIAG_CASE_RANGE_END
 					goto error_string_cannot_contain_unprintable;
 				case '\\':	// "c*\ escape char 
-					t_u32a idx		= (t_u32a)xft_tern(state->offset >= src.size, state->offset, state->offset + 1);
+					t_u32a idx		= (t_u32a)xft_tern(state->offset + 1 >= src.size, state->offset, state->offset + 1);
 					t_u32a mask_ 	= (t_u32a)xft_tern(state->offset >= src.size, 0, ~0);
 					t_u8 c			= src.mem[idx] & mask_;
 					t_u8 is_escaped	= !!(	(c == '\\')
