@@ -60,18 +60,13 @@ typedef struct s_simple_attributes
 	t_u32a					relative_offset;
 	t_u32a					tag_idx_token;
 	t_symbol_simple_type	type;
+	t_u16a					scope;
 }	t_simple_attributes;
-
-typedef struct s_scope
-{
-	t_indexmap		map;
-	t_u32a			simple_mark;
-}	t_scope;
 
 typedef struct s_symbol_table
 {
 	t_size		scope_depth;
-	t_vec		scope_map_array;	// vec<t_scope>, pool of scopes; [0, scope_depth) are live
+	t_indexmap	symbol_map;			// map<(namespace, name), symbol>
 	t_vec		simple_types;		// vec<t_simple_attributes>
 	t_vec		function_types;		// vec<t_function_attributes>
 	t_vec		arg_types;			// vec<t_symbol_simple_type>
@@ -89,12 +84,12 @@ typedef struct s_symbol_table
 //	array Vec<Tipo_Sym_Simple>. entonces la funcion guarda [comienzo_de_args, fin_de_args),
 //	que indexan  al array que acabamos de definir y así el type checking resuelve bien.
 //
-//  En paralelo tenemos mapas[], uno por scope.
+//  En paralelo tenemos un único mapa para todos los scopes, la semilla del hash es el scope.
 //
 //	Mapeo:
 //
-//		mapas[scope] (mapa global)
-//			|- IndexMap<fatptr<nombre>, t_symbol>
+//		mapa
+//			|- IndexMap<(scope, fatptr<nombre>), t_symbol>
 //
 //	El t_symbol.type dice a que array de los dos tenemos que acceder, y los 31 bits restantes
 //	dicen el índice a dicho array.
@@ -119,17 +114,16 @@ typedef struct s_symbol_table
 //	si no podemos ir haciendo pop() al vec de los mapas despues de volcar los datos o lo que sea.
 //	Las funciones solo se declaran en el namespace 0, que nunca se hace pop(), así que siguen
 //	siendo alcanzables por el mapa; el lookup de una función va directamente al namespace 0.
-//	Al hacer pop() solo se reusa la memoria de simple_types (simple_mark). function_types y
+//	simple_types es una pila: cada simple guarda su scope, así que los del scope de arriba son
+//	la cola del vec. Al hacer pop() se borran del mapa y se trunca simple_types. function_types y
 //	arg_types solo crecen: las funciones y sus runs de argumentos tienen que seguir siendo
 //	válidos para el type checking.
-
-#define SYMBOLS_INITIAL_SCOPES 25
 
 t_symbol_table				pdl_new_symbol_table(t_allocator allocator);
 void						pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
 								__attribute__((__nonnull__(2)));
-t_result					pdl_push_scope(t_allocator allocator, t_symbol_table *table)
-								__attribute__((__nonnull__(2)));
+void						pdl_push_scope(t_symbol_table *table)
+								__attribute__((__nonnull__(1)));
 void						pdl_pop_namespace(t_symbol_table *table)
 								__attribute__((__nonnull__(1)));
 t_result					pdl_intern_simple_symbol_to_current_namespace(t_allocator allocator,

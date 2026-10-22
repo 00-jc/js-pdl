@@ -38,7 +38,7 @@ inline static void	pdl__compiler_destroy(t_compiler_data *__restrict__ const dat
 	if (__builtin_expect(data->err_state.is_init, 0))			xft_vec_destroy(data->allocator, &data->err_state.line_offsets);
 	if (__builtin_expect(data->tokens_soa.ptr != nullptr, 1))	xft_destroy_soa(data->allocator, &data->tokens_soa);
 
-	if (__builtin_expect(data->symbols.scope_map_array.buf.mem != nullptr, 1))
+	if (__builtin_expect(data->symbols.symbol_map.soa.ptr != nullptr, 1))
 	{
 		if (__builtin_expect(data->symbols.scope_depth > 0, 1))	pdl_pop_namespace(&data->symbols);
 																pdl_destroy_symbol_table(data->allocator, &data->symbols);
@@ -65,12 +65,11 @@ static inline  t_result	pdl__compiler_init(t_compiler_data *__restrict__ const d
 		return (pdl__report(&data->_stderr, ERR_TOKENS_SOA_OOM, sizeof(ERR_TOKENS_SOA_OOM) - 1), KO);
 
 	data->symbols = pdl_new_symbol_table(data->allocator);
-	if (__builtin_expect(data->symbols.scope_map_array.buf.mem == nullptr, 0))
+	if (__builtin_expect(data->symbols.symbol_map.soa.ptr == nullptr, 0))
 		return (pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
 
 	// @Todo: no parser yet, so everything goes into a single namespace opened here.
-	if (__builtin_expect(pdl_push_scope(data->allocator, &data->symbols) == KO, 0))
-		return (pdl__report(&data->_stderr, ERR_SYMBOLS_OOM, sizeof(ERR_SYMBOLS_OOM) - 1), KO);
+	pdl_push_scope(&data->symbols);
 
 	data->err_state.writer = &data->_stderr;
 	data->lexer_state = (t_lexer_state){.offset = 0};
