@@ -62,7 +62,7 @@ static const uint64_t TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
 	[4  ] = 0x0000000000006F64, // do
 };
 
-const static t_token_type	TABLE_TOKS[] = {
+static const t_token_type	TABLE_TOKS[] = {
 	[23] = TOK_WHILE,
 	[17] = TOK_ECHO,
 	[14] = TOK_FLOAT,

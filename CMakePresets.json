@@ -1,0 +1,46 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "release",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "linux-x86",
+      "displayName": "Linux x86-64 v1..v4 release",
+      "inherits": "release",
+      "cacheVariables": { "JSPDL_RELEASE": "LINUX_x86" }
+    },
+    {
+      "name": "win64-x86",
+      "displayName": "Windows x86-64 v1..v4 release",
+      "inherits": "release",
+      "toolchainFile": "${sourceDir}/cmake/release_win64_x86.cmake",
+      "cacheVariables": { "JSPDL_RELEASE": "WIN64_x86" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-x86", "configurePreset": "linux-x86" },
+    { "name": "win64-x86", "configurePreset": "win64-x86" }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-x86",
+      "steps": [
+        { "type": "configure", "name": "linux-x86" },
+        { "type": "build", "name": "linux-x86" }
+      ]
+    },
+    {
+      "name": "win64-x86",
+      "steps": [
+        { "type": "configure", "name": "win64-x86" },
+        { "type": "build", "name": "win64-x86" }
+      ]
+    }
+  ]
+}
