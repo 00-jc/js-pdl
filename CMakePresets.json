@@ -19,8 +19,7 @@
       "name": "win64-x86",
       "displayName": "Windows x86-64 v1..v4 release",
       "inherits": "release",
-      "toolchainFile": "${sourceDir}/cmake/release_win64_x86.cmake",
-      "cacheVariables": { "JSPDL_RELEASE": "WIN64_x86" }
+      "cacheVariables": { "JSPDL_RELEASE": "WIN64_x86", "CMAKE_C_COMPILER": "clang" }
     }
   ],
   "buildPresets": [

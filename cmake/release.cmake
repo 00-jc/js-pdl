@@ -33,11 +33,20 @@ if(JSPDL_LEVEL)
   if(CMAKE_C_COMPILER_TARGET)
     list(APPEND _cc --target=${CMAKE_C_COMPILER_TARGET})
   endif()
-  find_program(JSPDL_LLVM_LINK llvm-link)
-  find_program(JSPDL_OPT opt)
-  find_program(JSPDL_LLC llc)
-  if(_format STREQUAL "COFF" AND NOT (JSPDL_LLVM_LINK AND JSPDL_OPT AND JSPDL_LLC))
-    message(FATAL_ERROR "jspdl: WIN64_x86 needs llvm-link, opt and llc")
+  set(_nm ${CMAKE_NM})
+  set(_objcopy ${CMAKE_OBJCOPY})
+  if(_format STREQUAL "COFF")
+    get_filename_component(_llvm_bin ${CMAKE_C_COMPILER} DIRECTORY)
+    foreach(t llvm-link opt llc llvm-nm llvm-objcopy)
+      string(MAKE_C_IDENTIFIER "JSPDL_${t}" _var)
+      string(TOUPPER ${_var} _var)
+      find_program(${_var} ${t} HINTS ${_llvm_bin})
+      if(NOT ${_var})
+        message(FATAL_ERROR "jspdl: WIN64_x86 needs ${t} next to clang (${_llvm_bin})")
+      endif()
+    endforeach()
+    set(_nm ${JSPDL_LLVM_NM})
+    set(_objcopy ${JSPDL_LLVM_OBJCOPY})
   endif()
 
   add_custom_command(
@@ -52,8 +61,8 @@ if(JSPDL_LEVEL)
       "-DCC=$<JOIN:${_cc},|>"
       -DCC_ID=${CMAKE_C_COMPILER_ID}
       "-DFLAGS=$<JOIN:$<TARGET_PROPERTY:xft_flags,INTERFACE_COMPILE_OPTIONS>;$<TARGET_PROPERTY:xft,INTERFACE_COMPILE_OPTIONS>,|>"
-      -DNM=${CMAKE_NM}
-      -DOBJCOPY=${CMAKE_OBJCOPY}
+      -DNM=${_nm}
+      -DOBJCOPY=${_objcopy}
       -DLLVM_LINK=${JSPDL_LLVM_LINK}
       -DOPT=${JSPDL_OPT}
       -DLLC=${JSPDL_LLC}
@@ -73,8 +82,8 @@ if(NOT JSPDL_RELEASE STREQUAL "${_os}_x86"
   message(
     FATAL_ERROR
     "jspdl: JSPDL_RELEASE=${JSPDL_RELEASE} but the target is "
-    "${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}; use the matching preset "
-    "or toolchain file"
+    "${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR}; build each release on "
+    "its own host"
   )
 endif()
 
@@ -87,9 +96,6 @@ include(ExternalProject)
 set(_fwd -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
 if(CMAKE_TOOLCHAIN_FILE)
   list(APPEND _fwd -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
-  if(DEFINED JSPDL_WIN64_SYSROOT)
-    list(APPEND _fwd -DJSPDL_WIN64_SYSROOT=${JSPDL_WIN64_SYSROOT})
-  endif()
 else()
   list(APPEND _fwd -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
 endif()
@@ -117,7 +123,11 @@ foreach(l IN LISTS JSPDL_LEVELS)
   add_dependencies(js-pdl js-pdl-${l})
 endforeach()
 target_link_libraries(js-pdl PRIVATE xft::xft xft::flags)
-target_link_options(js-pdl PRIVATE LINKER:--gc-sections LINKER:--strip-all)
+if(CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
+  target_link_options(js-pdl PRIVATE LINKER:/OPT:REF LINKER:/DEBUG:NONE)
+else()
+  target_link_options(js-pdl PRIVATE LINKER:--gc-sections LINKER:--strip-all)
+endif()
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_ok)

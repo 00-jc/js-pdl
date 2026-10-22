@@ -4,10 +4,6 @@ set(JSPDL_RELEASE "" CACHE STRING "LINUX_x86, WIN64_x86, or empty for one build 
 set_property(CACHE JSPDL_RELEASE PROPERTY STRINGS "" LINUX_x86 WIN64_x86)
 set(JSPDL_LEVEL "" CACHE STRING "internal: v1 .. v4 sub-build of a release")
 
-if(JSPDL_RELEASE STREQUAL "WIN64_x86" AND NOT CMAKE_TOOLCHAIN_FILE)
-    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_LIST_DIR}/cmake/release_win64_x86.cmake)
-endif()
-
 project(pdl VERSION 0.0.1 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 23)
