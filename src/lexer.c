@@ -52,7 +52,7 @@ static inline void	pdl__ad_hoc_token_push(
 }
 
 __attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
-static inline t_u64a		pdl__interpret_numeral(const t_u8 *__restrict__ const mem, t_u32a len)
+static inline t_u64a		pdl__interpret_numeral(t_blk8r mem, t_u32a len)
 {
 	t_u64a	value;
 	t_size	it;
@@ -64,7 +64,7 @@ static inline t_u64a		pdl__interpret_numeral(const t_u8 *__restrict__ const mem,
 }
 
 __attribute__((__nonnull__(1), pure, __always_inline__, __unused__))
-static inline t_f64a		pdl__interpret_decimal_part(const t_u8 *__restrict__ const mem, t_u32a len)
+static inline t_f64a		pdl__interpret_decimal_part(t_blk8r mem, t_u32a len)
 {
 	t_f64a	value;
 	t_size	it;
