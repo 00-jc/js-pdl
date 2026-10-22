@@ -13,7 +13,7 @@ typedef enum e_symbol_simple_type : t_u8
 
 typedef struct s_symbol
 {
-	enum
+	enum : t_u8
 	{
 		SYMT_SIMPLE	= 0,
 		SYMT_FUNC	= 1,
