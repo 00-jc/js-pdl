@@ -201,28 +201,28 @@ whitespace:
 
 		if (__builtin_expect(64 < offset - tok.as.lexeme.start, 0)) goto ident_too_big;
 		tok.as.lexeme.end = offset;
-		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
-		if (size - 2 < 7) // (size >= 2 && size <= 8)
+		t_u32a ident_size = tok.as.lexeme.end - tok.as.lexeme.start;
+		if (ident_size - 2 < 7) // (ident_size >= 2 && ident_size <= 8)
 		{
-			// LLVM nor gcc can't seem to inline the memcpy branch based on the size invariant
+			// LLVM nor gcc can't seem to inline the memcpy branch based on the ident_size invariant
 			// so i'll do a overlap load myself.
 			//
-			// invariant, first 2 bytes get always copied since size _has to_ be >= 2 to get in this
+			// invariant, first 2 bytes get always copied since ident_size _has to_ be >= 2 to get in this
 			// branch.
 
 			t_u64 x = 0;
 			t_u64 z = 0;
 
 			const t_blk8r	ptr		= mem + tok.as.lexeme.start;
-			const t_blk8r	base	= (t_any)xft_tern(4 < size, (t_uptr)mem + tok.as.lexeme.start, (t_uptr)&z);
-			const t_u8		offset	= (t_u8)xft_tern(4 < size, size - 4, 0); 
+			const t_blk8r	base	= (t_any)xft_tern(4 < ident_size, (t_uptr)mem + tok.as.lexeme.start, (t_uptr)&z);
+			const t_u8		off	= (t_u8)xft_tern(4 < ident_size, ident_size - 4, 0); 
 
 			if (base == nullptr) __builtin_unreachable();
 
 			x |= *(const t_u32 *__restrict__ const)base;
 			x |= *(const t_u16 *__restrict__ const)ptr;
-			x |= (t_u64)(*(const t_u16 *__restrict__ const)(ptr + size - 2)) << ((size - 2) << 3);
-			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + offset)) << (offset << 3);
+			x |= (t_u64)(*(const t_u16 *__restrict__ const)(ptr + ident_size - 2)) << ((ident_size - 2) << 3);
+			x |= (t_u64)(*(const t_u16 *__restrict__ const)(base + off)) << (off << 3);
 
 			x = xft_from_le64(x);
 			t_u32a hash = (t_u32a)representative_bits_hash(x);
