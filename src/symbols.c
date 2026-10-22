@@ -76,7 +76,7 @@ void	pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
 	xft_vec_destroy(allocator, &table->arg_types);
 }
 
-__attribute__((__always_inline__, __nonnull__(1)))
+__attribute__((__always_inline__, __nonnull__(1), __used__))
 inline void	pdl_push_scope(t_symbol_table *table)
 {
 	++table->scope_depth;
