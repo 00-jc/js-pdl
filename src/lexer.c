@@ -88,7 +88,6 @@ t_result	pdl_lex_next_token(
 	t_blk8r			mem = src.mem;
 	const t_size	size = src.size;
 
-	// this is just to help with aliasing.
 	t_u32a			offset;
 
 	t_token		tok;
@@ -107,6 +106,8 @@ t_result	pdl_lex_next_token(
 	if (mem == nullptr) __builtin_unreachable();
 	if (state->offset > size) __builtin_unreachable();
 
+	// this is just to help with aliasing, if we don't hoist
+	// it we keep hammering the address even at -O3 + lto.
 	offset = state->offset;
 
 whitespace:
