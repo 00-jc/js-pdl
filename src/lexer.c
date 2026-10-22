@@ -32,7 +32,7 @@ static inline void	pdl__ad_hoc_token_push(
 {
 	const t_size	n = soa->occupied_elements;
 	const t_size	cap = soa->capacity_elements;
-	t_u8 *const		base = soa->ptr;
+	t_blk8r			base = soa->ptr;
 	t_size			off;
 	t_size			size;
 	t_any			start;
@@ -85,9 +85,10 @@ t_result	pdl_lex_next_token(
 	t_error_state	*__restrict__ const	error_state
 )
 {
-	// this is just to help with aliasing.
 	t_blk8r			mem = src.mem;
 	const t_size	size = src.size;
+
+	// this is just to help with aliasing.
 	t_u32a			offset;
 
 	t_token		tok;
