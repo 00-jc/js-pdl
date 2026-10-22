@@ -72,53 +72,6 @@ typedef struct s_symbol_table
 	t_vec		arg_types;			// vec<t_symbol_simple_type>
 }	t_symbol_table;
 
-// REPRESENTACION DE MEMORIA:
-//
-//	t_symbol
-//		|
-//		|- type == SIMPLE -> Vec<simple_types>[index_to_dense_array] -> t_symbols_simple
-//		|
-//		|- type == FUNC -> Vec<functions>[index_to_dense_array] -> t_symbol_func
-//
-//	Para los nodos de tamaño variable (argumentos de funciones), vamos a tener un
-//	array Vec<Tipo_Sym_Simple>. entonces la funcion guarda [comienzo_de_args, fin_de_args),
-//	que indexan  al array que acabamos de definir y así el type checking resuelve bien.
-//
-//  En paralelo tenemos un único mapa para todos los scopes, la semilla del hash es el scope.
-//
-//	Mapeo:
-//
-//		mapa
-//			|- IndexMap<(scope, fatptr<nombre>), t_symbol>
-//
-//	El t_symbol.type dice a que array de los dos tenemos que acceder, y los 31 bits restantes
-//	dicen el índice a dicho array.
-//
-//	Aqui no tiene sentido usar Soas por que cuando hagamos type checking vamos a tocar todos
-//	los campos.
-//
-//	@IMPORTANTE: NO PODEMOS USAR PUNTEROS, mientras los arrays crecen las referencias se invalidan
-//				 _NECESITAMOS ESTABILIDAD REFERENCIAL_.
-//
-//	@TODO: quitar el símbolo del token cuando esto esté implementado, es redundante y acopla de más,
-//	la jerarquía de conocimiento es Tabla de simbolos -> tokens y no al revés, el lexer produce el símbolo
-//	o lo que sea que piden en el diseño de la asignatura, pero el flujo de informacion va de arriba abajo
-//	y no al revés. Sólo cambia quien es el owner de la info.
-//
-//	Ahora bien, hay que ver si usamos un stack de mapas o no, si el lenguaje admite usos antes que
-//	declaraciones (de funciones) hay que hacer dos pases:
-//
-//		-	construccion
-//		-	análisis
-//
-//	si no podemos ir haciendo pop() al vec de los mapas despues de volcar los datos o lo que sea.
-//	Las funciones solo se declaran en el namespace 0, que nunca se hace pop(), así que siguen
-//	siendo alcanzables por el mapa; el lookup de una función va directamente al namespace 0.
-//	simple_types es una pila: cada simple guarda su scope, así que los del scope de arriba son
-//	la cola del vec. Al hacer pop() se borran del mapa y se trunca simple_types. function_types y
-//	arg_types solo crecen: las funciones y sus runs de argumentos tienen que seguir siendo
-//	válidos para el type checking.
-
 t_symbol_table				pdl_new_symbol_table(t_allocator allocator);
 void						pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
 								__attribute__((__nonnull__(2)));
