@@ -99,7 +99,7 @@ void	pdl_pop_namespace(t_symbol_table *table)
 #else
 #pragma GCC ivdep
 #endif
-	for (t_size it = 0; it < elements; ++it) meta[it] |= (t_u8)xft_tern(scopes[it] == scope, 0x80, 0x00); // clang goes CRAZY on this
+	for (t_size it = 0; it < elements; ++it) meta[it] |= (t_u8)((scopes[it] == scope) << 7); // clang goes CRAZY on this
 	table->scope_depth--;
 }
 
