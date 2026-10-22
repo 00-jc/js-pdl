@@ -30,16 +30,16 @@ if(FORMAT STREQUAL "ELF")
   endif()
 
 elseif(FORMAT STREQUAL "COFF")
-  run(${LLVM_LINK} ${OBJS} ${LIB} -o ${OUT}.bc)
-  run(
-    ${OPT} -passes=internalize,lto<O3>
-    -internalize-public-api-list=xft_main,memcpy,memset,memmove,memcmp
-    ${OUT}.bc -o ${OUT}.opt.bc
+  execute_process(
+    COMMAND
+      ${LLD_LINK} /lldemit:llvm /entry:xft_main /include:xft_main /nodefaultlib
+      /force:unresolved /machine:x64 /subsystem:console ${OBJS} ${LIB} /out:${OUT}.bc
+    RESULT_VARIABLE _rc OUTPUT_VARIABLE _log ERROR_VARIABLE _log
   )
-  run(
-    ${LLC} -O3 -mcpu=${LLC_CPU} --function-sections --data-sections
-    -filetype=obj ${OUT}.opt.bc -o ${OUT}
-  )
+  if(NOT _rc EQUAL 0 OR NOT EXISTS ${OUT}.bc)
+    message(FATAL_ERROR "release ${LEVEL}: lld-link LTO failed:\n${_log}")
+  endif()
+  run(${CC} -O3 -march=${MARCH} -ffunction-sections -fdata-sections -c ${OUT}.bc -o ${OUT})
   execute_process(
     COMMAND ${NM} --defined-only --extern-only --format=posix ${OUT}
     OUTPUT_VARIABLE _defs OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
@@ -55,7 +55,7 @@ elseif(FORMAT STREQUAL "COFF")
   run(${OBJCOPY} --redefine-syms=${OUT}.syms ${OUT})
   undefined_syms(_u)
   execute_process(
-    COMMAND ${NM} --defined-only --format=just-symbols ${OUT}.bc
+    COMMAND ${NM} --defined-only --format=just-symbols ${OBJS} ${LIB}
     OUTPUT_VARIABLE _own OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY
   )
   string(REPLACE "\n" ";" _own "${_own}")

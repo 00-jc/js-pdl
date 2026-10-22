@@ -20,6 +20,9 @@ if(JSPDL_LEVEL)
     message(FATAL_ERROR "jspdl: unknown JSPDL_LEVEL '${JSPDL_LEVEL}'")
   endif()
 
+  if(_format STREQUAL "COFF")
+    set(CMAKE_C_COMPILE_OPTIONS_IPO -flto=full)
+  endif()
   add_subdirectory(xft)
   set_property(TARGET xft PROPERTY INTERPROCEDURAL_OPTIMIZATION ON)
 
@@ -37,7 +40,7 @@ if(JSPDL_LEVEL)
   set(_objcopy ${CMAKE_OBJCOPY})
   if(_format STREQUAL "COFF")
     get_filename_component(_llvm_bin ${CMAKE_C_COMPILER} DIRECTORY)
-    foreach(t llvm-link opt llc llvm-nm llvm-objcopy)
+    foreach(t lld-link llvm-nm llvm-objcopy)
       string(MAKE_C_IDENTIFIER "JSPDL_${t}" _var)
       string(TOUPPER ${_var} _var)
       find_program(${_var} ${t} HINTS ${_llvm_bin})
@@ -63,10 +66,8 @@ if(JSPDL_LEVEL)
       "-DFLAGS=$<JOIN:$<TARGET_PROPERTY:xft_flags,INTERFACE_COMPILE_OPTIONS>;$<TARGET_PROPERTY:xft,INTERFACE_COMPILE_OPTIONS>,|>"
       -DNM=${_nm}
       -DOBJCOPY=${_objcopy}
-      -DLLVM_LINK=${JSPDL_LLVM_LINK}
-      -DOPT=${JSPDL_OPT}
-      -DLLC=${JSPDL_LLC}
-      -DLLC_CPU=${JSPDL_MARCH_${JSPDL_LEVEL}}
+      -DLLD_LINK=${JSPDL_LLD_LINK}
+      -DMARCH=${JSPDL_MARCH_${JSPDL_LEVEL}}
       -P ${PROJECT_SOURCE_DIR}/cmake/release_level.cmake
     DEPENDS
       $<TARGET_OBJECTS:js-pdl-objs> xft ${PROJECT_SOURCE_DIR}/cmake/release_level.cmake
