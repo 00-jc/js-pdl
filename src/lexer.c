@@ -85,6 +85,11 @@ t_result	pdl_lex_next_token(
 	t_error_state	*__restrict__ const	error_state
 )
 {
+	// this is just to help with aliasing.
+	t_blk8r			mem = src.mem;
+	const t_size	size = src.size;
+	t_u32a			offset;
+
 	t_token		tok;
 	t_u8		dispatched;
 	t_buffer	fmt;
@@ -98,32 +103,32 @@ t_result	pdl_lex_next_token(
 	t_size		lane;
 	t_u32a		point;
 
-	if (src.mem == nullptr) __builtin_unreachable();
-	if (state->offset > src.size) __builtin_unreachable();
+	if (mem == nullptr) __builtin_unreachable();
+	if (state->offset > size) __builtin_unreachable();
+
+	offset = state->offset;
 
 whitespace:
 	tok.type			= TOK_EOF;
 	tok.as.value.i		= 0;
 
 	// 64 = max len for ids / strings + 8 for possible spaces
-	xft_prefetch_read0((t_cany)(src.mem + state->offset), 64 + 8);
-	xft_prefetch_read0(TABLE_REPR, REPRESENTATIVE_TABLE_SIZE * sizeof(t_u64));
-	xft_prefetch_read0(TABLE_TOKS, REPRESENTATIVE_TABLE_SIZE);
+	xft_prefetch_read0((t_cany)(mem + offset), 64 + 8);
 
 	do
 	{
-		rem = src.size - state->offset;
+		rem = size - offset;
 		valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
-		wide = xft_vmask_load(src.mem + state->offset, valid);
+		wide = xft_vmask_load(mem + offset, valid);
 		mask = ~(xft_vrangemask(wide, 9, 13) | xft_veqmask(wide, ' '));
 		lane = xft_memctz_u64(mask);
-		state->offset += xft_tern(mask != 0, lane, sizeof(wide));
+		offset += xft_tern(mask != 0, lane, sizeof(wide));
 	} while (mask == 0);
 
-	if (__builtin_expect(state->offset >= src.size, 0)) goto success;
-	dispatched = src.mem[state->offset++];
+	if (__builtin_expect(offset >= size, 0)) goto success;
+	dispatched = mem[offset++];
 
-	tok.as.lexeme.start = state->offset - 1;
+	tok.as.lexeme.start = offset - 1;
 	
 	switch (dispatched)
 	{
@@ -164,7 +169,7 @@ whitespace:
 		case '"':
 			goto string_literal;
 		default:
-			point = xft_xid_load_point(src.mem + tok.as.lexeme.start, src.size - tok.as.lexeme.start);
+			point = xft_xid_load_point(mem + tok.as.lexeme.start, size - tok.as.lexeme.start);
 			if (!xft_xid_is_start(xft_xid_decode(point))) goto unexpected_char;
 			goto identifier;
 	}
@@ -175,25 +180,25 @@ whitespace:
 
 		// [a-zA-Z_][a-zA-Z0-9_]+
 		mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_')) >> lane;
-		state->offset = (t_u32a)(tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane)); // leer
-		while (mask == 0 && (rem = src.size - state->offset) != 0)
+		offset = (t_u32a)(tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane)); // leer
+		while (mask == 0 && (rem = size - offset) != 0)
 		{
 			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
-			wide = xft_vmask_load(src.mem + state->offset, valid);
+			wide = xft_vmask_load(mem + offset, valid);
 			mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_'));
-			state->offset += xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide)); // leer
+			offset += xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide)); // leer
 		}
 
 		// utf8 and whatever the vector path stopped on
-		while (state->offset < src.size)
+		while (offset < size)
 		{
-			point = xft_xid_load_point(src.mem + state->offset, src.size - state->offset);
+			point = xft_xid_load_point(mem + offset, size - offset);
 			if (!xft_xid_is_continue(xft_xid_decode(point))) break;
-			state->offset += xft_xid_codepoint_len(point);
+			offset += xft_xid_codepoint_len(point);
 		}
 
-		if (__builtin_expect(64 < state->offset - tok.as.lexeme.start, 0)) goto ident_too_big;
-		tok.as.lexeme.end = state->offset;
+		if (__builtin_expect(64 < offset - tok.as.lexeme.start, 0)) goto ident_too_big;
+		tok.as.lexeme.end = offset;
 		t_u32a size = tok.as.lexeme.end - tok.as.lexeme.start;
 		if (size - 2 < 7) // (size >= 2 && size <= 8)
 		{
@@ -206,8 +211,8 @@ whitespace:
 			t_u64 x = 0;
 			t_u64 z = 0;
 
-			const t_blk8r	ptr		= src.mem + tok.as.lexeme.start;
-			const t_blk8r	base	= (t_any)xft_tern(4 < size, (t_uptr)src.mem + tok.as.lexeme.start, (t_uptr)&z);
+			const t_blk8r	ptr		= mem + tok.as.lexeme.start;
+			const t_blk8r	base	= (t_any)xft_tern(4 < size, (t_uptr)mem + tok.as.lexeme.start, (t_uptr)&z);
 			const t_u8		offset	= (t_u8)xft_tern(4 < size, size - 4, 0); 
 
 			if (base == nullptr) __builtin_unreachable();
@@ -228,31 +233,31 @@ whitespace:
 	{
 		tok.type = TOK_CONST_INT;
 
-		while (state->offset < src.size && xft_isdigit(src.mem[state->offset])) //[0-9]+
-			++state->offset; // leer
-		if (state->offset < src.size && src.mem[state->offset] == '.') // [0-9]+.
+		while (offset < size && xft_isdigit(mem[offset])) //[0-9]+
+			++offset; // leer
+		if (offset < size && mem[offset] == '.') // [0-9]+.
 		{
-			++state->offset; // leer
+			++offset; // leer
 			goto float_constant;
 		}
-		tok.as.value.i = pdl__interpret_numeral(src.mem + tok.as.lexeme.start, state->offset - tok.as.lexeme.start); // obtener valor
+		tok.as.value.i = pdl__interpret_numeral(mem + tok.as.lexeme.start, offset - tok.as.lexeme.start); // obtener valor
 		goto success; // Generar Token
 	}
 
 	float_constant: // [0-9]+.
 	{
 		t_u32a real_part_start = tok.as.lexeme.start;
-		t_u32a real_part_end = state->offset - 1;
-		t_u32a decimal_start = state->offset;
+		t_u32a real_part_end = offset - 1;
+		t_u32a decimal_start = offset;
 		tok.type = TOK_CONST_FLOAT;
 
-		while (state->offset < src.size && xft_isdigit(src.mem[state->offset])) // [0-9]+.[0-9]+
-			++state->offset;
+		while (offset < size && xft_isdigit(mem[offset])) // [0-9]+.[0-9]+
+			++offset;
 
-		if (__builtin_expect(decimal_start == state->offset, 0)) goto float_follow_dot_error;
+		if (__builtin_expect(decimal_start == offset, 0)) goto float_follow_dot_error;
 
-		t_u64a lhs = pdl__interpret_numeral(src.mem + real_part_start, real_part_end - real_part_start); // obtener valor entero
-		t_f64a rhs = pdl__interpret_decimal_part(src.mem + decimal_start, state->offset - decimal_start); // obtener valor decimal
+		t_u64a lhs = pdl__interpret_numeral(mem + real_part_start, real_part_end - real_part_start); // obtener valor entero
+		t_f64a rhs = pdl__interpret_decimal_part(mem + decimal_start, offset - decimal_start); // obtener valor decimal
 		tok.as.value.f = (t_f64a)lhs + rhs; // obtener valor
 		goto success; // Generar token
 	}
@@ -262,21 +267,21 @@ whitespace:
 		t_u8	compound_elements = 0;
 
 		tok.type = TOK_STRING_LITERAL;
-		tok.as.lexeme.start = state->offset;
+		tok.as.lexeme.start = offset;
 		while (1)
 		{
 			strlit_loop:  // "c*
-			if (__builtin_expect(state->offset >= src.size, 0)) goto error_unterminated_string;
-			switch (src.mem[state->offset])
+			if (__builtin_expect(offset >= size, 0)) goto error_unterminated_string;
+			switch (mem[offset])
 			{
 DIAG_CASE_RANGE_BEGIN
 				case 0x00 ... 0x1F: // incompatibles
 DIAG_CASE_RANGE_END
 					goto error_string_cannot_contain_unprintable;
 				case '\\':	// "c*\ escape char 
-					t_u32a idx		= (t_u32a)xft_tern(state->offset + 1 >= src.size, state->offset, state->offset + 1);
-					t_u32a mask_ 	= (t_u32a)xft_tern(state->offset >= src.size, 0, ~0);
-					t_u8 c			= src.mem[idx] & mask_;
+					t_u32a idx		= (t_u32a)xft_tern(offset + 1 >= size, offset, offset + 1);
+					t_u32a mask_	= (t_u32a)xft_tern(offset + 1 >= size, 0, ~0);
+					t_u8 c			= mem[idx] & mask_;
 					t_u8 is_escaped	= !!(	(c == '\\')
 										|	(c == 'n')
 										|	(c == 't')
@@ -285,68 +290,72 @@ DIAG_CASE_RANGE_END
 										|	(c == 'v'));
 
 					compound_elements	+= is_escaped;
-					state->offset		+= xft_tern(is_escaped, 2, 1); // leer
+					offset		+= xft_tern(is_escaped, 2, 1); // leer
 					goto strlit_loop;
 				case '"': // "c*"
-					tok.as.lexeme.end = state->offset++; // leer
+					tok.as.lexeme.end = offset++; // leer
 					if (__builtin_expect((tok.as.lexeme.end - tok.as.lexeme.start) - compound_elements > 64, 0)) goto strlit_too_big;
 					goto success; // Generar token
 DIAG_CASE_RANGE_BEGIN
 				case 0x80 ... 0xFF: __attribute__((__fallthrough__));
 DIAG_CASE_RANGE_END
 				default:
-					++state->offset; // leer
+					++offset; // leer
 			}
 		}
 	}
 
 	possible_operator_followed_by_eq: // + | < | > | ! 
 	{
-		t_u64a			cond		= state->offset < src.size;
-		t_u32a			idx	 		= (t_u32a)xft_tern(cond, state->offset, state->offset - 1);
-		t_u32a			next 		= (t_u32a)xft_tern(cond, src.mem[idx], 0);
+		t_u64a			cond		= offset < size;
+		t_u32a			idx	 		= (t_u32a)xft_tern(cond, offset, offset - 1);
+		t_u32a			next 		= (t_u32a)xft_tern(cond, mem[idx], 0);
 		t_token_type 	type 		= (t_token_type)xft_tern(next == '=', dispatched | 0x80, dispatched);
 		t_u64a			newOffset	= xft_tern(next == '=', 1, 0);
 
-		state->offset += newOffset; // leer
-		tok.as.lexeme.end = state->offset;
+		offset += newOffset; // leer
+		tok.as.lexeme.end = offset;
 		tok.type = type;
 		goto success; // Generar token
 	}
 	single_char_token: // , | ; | ( | ) | { | } | - | * | %
 	{
 		tok.type			= dispatched;
-		tok.as.lexeme.end	= state->offset;
+		tok.as.lexeme.end	= offset;
 		goto success; // Generar token
 	}
 	double_op_or_error: // | | &
 	{
-		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 1)) // || | &&
+		if (__builtin_expect(offset < size && mem[offset] == dispatched, 1)) // || | &&
 		{
 			tok.type = dispatched;
-			tok.as.lexeme.end = ++state->offset; // leer
+			tok.as.lexeme.end = ++offset; // leer
 			goto success; // Generar token
 		}
 		goto no_double_error; // Error
 	}
 	div_or_comment: // /
 	{
-		if (__builtin_expect(state->offset < src.size && src.mem[state->offset] == dispatched, 0)) // //
+		if (__builtin_expect(offset < size && mem[offset] == dispatched, 0)) // //
 		{
-			t_any ptr = xft_memchr(src.mem + state->offset, '\n', src.size - state->offset); // //c*\n
-			state->offset = (t_u32a)xft_tern(ptr != nullptr, (t_u32a)((t_uptr)ptr - (t_uptr)src.mem) + 1, src.size); // leer
+			t_any ptr = xft_memchr(mem + offset, '\n', size - offset); // //c*\n
+			offset = (t_u32a)xft_tern(ptr != nullptr, (t_u32a)((t_uptr)ptr - (t_uptr)mem) + 1, size); // leer
 			goto whitespace; // Buscar el verdadero token, saltar comentario
 		}
 		tok.type = TOK_DIV;
-		tok.as.lexeme.end = state->offset;
+		tok.as.lexeme.end = offset;
 		goto success; // Generar token
 	}
 
 	success: // Generación de tokens
 		if (__builtin_expect(soa->occupied_elements == soa->capacity_elements, 0)
 			&& !xft_soa_reserve(allocator, soa, &token_soa_ctx, 1))
+		{
+			state->offset = offset;
 			return (KO);
+		}
 		pdl__ad_hoc_token_push(soa, &tok);
+		state->offset = offset;
 		return (OK);
 
 // ERRORES
@@ -382,11 +391,17 @@ DIAG_CASE_RANGE_END
 
 	report_error:
 		if (__builtin_expect(pdl_line_of_token_lazy_init(allocator, error_state, tok.as.lexeme.start, &line, src) == KO, 0))
+		{
+			state->offset = offset;
 			return (KO);
+		}
 		args[0] = (t_u64)(t_uptr)file_name.mem;
 		args[1] = file_name.size;
 		args[2] = line;
 		args[3] = tok.as.lexeme.start - ((const t_u32a *)error_state->line_offsets.buf.mem)[line - 1] + 1;
 		xft_fmt_writer(error_state->writer, fmt, args);
-		return (KO);
+		{
+			state->offset = offset;
+			return (KO);
+		}
 }

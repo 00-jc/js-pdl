@@ -44,7 +44,7 @@ result = __builtin_ia32_pext_di((uint64_t)input, 0x4020803);
   return result;
 }
 static FBHC_CONSTEXPR uint64_t REPRESENTATIVE_TABLE_SIZE = 32;
-static const uint64_t TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
+static const uint64_t __attribute__((aligned(64))) TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
 	[23 ] = 0x000000656C696877, // while
 	[17 ] = 0x000000006F686365, // echo
 	[14 ] = 0x00000074616F6C66, // float
@@ -62,7 +62,7 @@ static const uint64_t TABLE_REPR[REPRESENTATIVE_TABLE_SIZE] = {
 	[4  ] = 0x0000000000006F64, // do
 };
 
-static const t_token_type	TABLE_TOKS[] = {
+static const t_token_type __attribute__((aligned(64))) TABLE_TOKS[REPRESENTATIVE_TABLE_SIZE] = {
 	[23] = TOK_WHILE,
 	[17] = TOK_ECHO,
 	[14] = TOK_FLOAT,
