@@ -19,7 +19,8 @@
       "name": "win64-x86",
       "displayName": "Windows x86-64 v1..v4 release",
       "inherits": "release",
-      "cacheVariables": { "JSPDL_RELEASE": "WIN64_x86", "CMAKE_C_COMPILER": "clang" }
+      "toolchainFile": "${sourceDir}/cmake/zig-win64.cmake",
+      "cacheVariables": { "JSPDL_RELEASE": "WIN64_x86" }
     }
   ],
   "buildPresets": [

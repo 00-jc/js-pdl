@@ -1,0 +1,7 @@
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_C_COMPILER zig cc)
+set(CMAKE_C_COMPILER_TARGET x86_64-windows-gnu)
+find_program(CMAKE_C_COMPILER_AR llvm-ar)
+find_program(CMAKE_C_COMPILER_RANLIB llvm-ranlib)
+set(CMAKE_C_STANDARD_LIBRARIES "" CACHE STRING "")
