@@ -119,23 +119,28 @@ whitespace:
 
 	do
 	{
-		rem = size - offset;
-		valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
-		wide = xft_vmask_load(mem + offset, valid);
-		mask = ~(xft_vrangemask(wide, 9, 13) | xft_veqmask(wide, ' '));
-		lane = xft_memctz_u64(mask);
-		offset += xft_tern(mask != 0, lane, sizeof(wide));
+		rem = size - offset; // No leer fuera del buffer
+		valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0); // Máscara de bits con 1 para indicar qué bytes cargados leer y no leer basura
+		wide = xft_vmask_load(mem + offset, valid); // Cargar los bytes según la máscara valid
+		mask = ~(xft_vrangemask(wide, 9, 13) | xft_veqmask(wide, ' ')); // bits a 1 bytes que no son espacios
+		lane = xft_memctz_u64(mask); // count trailing zeroes
+		offset += xft_tern(mask != 0, lane, sizeof(wide)); // Avanzar hasta siguiente caracter sin espacios; leer
 	} while (mask == 0);
 
-	if (__builtin_expect(offset >= size, 0)) goto success;
-	dispatched = mem[offset++];
+	if (__builtin_expect(offset >= size, 0)) goto success; // EOF si llegamos al final
+	dispatched = mem[offset++]; // primer caracter no espacio
 
 	tok.as.lexeme.start = offset - 1;
 	
-	switch (dispatched)
+	// Elegir siguiente estado para primer caracter, a partir de ahí cada estado transiciona al diguiente según siguientes
+	// caracteres, es decir, llevar a un estado, donde cada caracer será tratado más específicamente
+	switch (dispatched) 
 	{
+		// EOF
 		case 0:
 			goto success;
+		
+		// Tokens de un solo caracter
 		case ',': __attribute__((__fallthrough__));
 		case ';': __attribute__((__fallthrough__));
 		case '(': __attribute__((__fallthrough__));
@@ -146,17 +151,25 @@ whitespace:
 		case '*': __attribute__((__fallthrough__));
 		case '%':
 			goto single_char_token;
+		
+		// Tokens de doble caracter repetido
 		case '|': __attribute__((__fallthrough__));
 		case '&':
 			goto double_op_or_error;
+		
+		// Operadores y operadores seguidos de =
 		case '=': __attribute__((__fallthrough__));
 		case '!': __attribute__((__fallthrough__));
 		case '<': __attribute__((__fallthrough__));
 		case '>': __attribute__((__fallthrough__));
 		case '+':
 			goto possible_operator_followed_by_eq;
+		
+		// Divisón o comentario
 		case '/':
 			goto div_or_comment;
+		
+		// Cifras
 		case '0': __attribute__((__fallthrough__));
 		case '1': __attribute__((__fallthrough__));
 		case '2': __attribute__((__fallthrough__));
@@ -168,8 +181,12 @@ whitespace:
 		case '8': __attribute__((__fallthrough__));
 		case '9':
 			goto numeric_constant;
+		
+		// Inicio de string
 		case '"':
 			goto string_literal;
+
+		// Identificador o caso desconocido (caracter inseperado)
 		default:
 			point = xft_xid_load_point(mem + tok.as.lexeme.start, size - tok.as.lexeme.start);
 			if (!xft_xid_is_start(xft_xid_decode(point))) goto unexpected_char;
@@ -181,14 +198,16 @@ whitespace:
 		tok.type = TOK_IDENTIFIER;
 
 		// [a-zA-Z_][a-zA-Z0-9_]+
+		// Comprobar qué bytes tienen caracteres alfanuméricos y _
 		mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_')) >> lane;
-		offset = (t_u32a)(tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane)); // leer
+		offset = (t_u32a)(tok.as.lexeme.start + xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide) - lane)); // leer todos los espacios
+
 		while (mask == 0 && (rem = size - offset) != 0)
 		{
-			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0);
-			wide = xft_vmask_load(mem + offset, valid);
-			mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_'));
-			offset += xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide)); // leer
+			valid = xft_tern(rem < sizeof(wide), (t_nmask)((1ull << rem) - 1), (t_nmask)~0); // Máscara para no leer fuera del buffer
+			wide = xft_vmask_load(mem + offset, valid); // Cargar bytes según la máscara
+			mask = ~(xft_vrangemask(wide | 0x20, 'a', 'z') | xft_vrangemask(wide, '0', '9') | xft_veqmask(wide, '_')); // Comprobar qué bytes tienen caracteres alfanuméricos y _
+			offset += xft_tern(mask != 0, xft_memctz_u64(mask), sizeof(wide)); // leer el número de caracteres alfanumericos necesarios
 		}
 
 		// utf8 and whatever the vector path stopped on
@@ -199,9 +218,11 @@ whitespace:
 			offset += xft_xid_codepoint_len(point);
 		}
 
-		if (__builtin_expect(64 < offset - tok.as.lexeme.start, 0)) goto ident_too_big;
-		tok.as.lexeme.end = offset;
-		t_u32a ident_size = tok.as.lexeme.end - tok.as.lexeme.start;
+		if (__builtin_expect(64 < offset - tok.as.lexeme.start, 0)) goto ident_too_big; // Identificador demasiado grande
+		tok.as.lexeme.end = offset; // Poner final de token
+		t_u32a ident_size = tok.as.lexeme.end - tok.as.lexeme.start; // Longitud del lexema
+
+		// Comprobar si es palabra reservada
 		if (ident_size - 2 < 7) // (ident_size >= 2 && ident_size <= 8)
 		{
 			// LLVM nor gcc can't seem to inline the memcpy branch based on the ident_size invariant
@@ -226,7 +247,7 @@ whitespace:
 
 			x = xft_from_le64(x);
 			t_u32a hash = (t_u32a)representative_bits_hash(x);
-			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_TOKS[hash], TOK_IDENTIFIER);
+			tok.type = (t_token_type)xft_tern(TABLE_REPR[hash] == x, TABLE_TOKS[hash], TOK_IDENTIFIER); // Adignar tipo de token
 		}
 		goto success; // Generar token
 	}
