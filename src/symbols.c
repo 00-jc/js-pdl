@@ -163,6 +163,7 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 
 #define ERR_FUNC_NOT_GLOBAL "error: functions can only be declared in the global namespace\n"
 
+// Insertar función en el ámbito global
 __attribute__((__nonnull__(2, 3, 4)))
 t_result	pdl_intern_function_symbol_to_global_namespace(
 	t_allocator										allocator,
@@ -175,7 +176,7 @@ t_result	pdl_intern_function_symbol_to_global_namespace(
 	t_size											nargs
 )
 {
-	const t_buffer			key = pdl__token_name(src, tokens, idx_of_token);
+	const t_buffer			key = pdl__token_name(src, tokens, idx_of_token); // Nombre
 	const t_size			arg_start = xft_vec_len(&table->arg_types, sizeof(t_symbol_simple_type));
 	t_function_attributes	attr;
 	t_size					index;
