@@ -8,18 +8,21 @@ static inline t_buffer	pdl__token_name(const t_buffer src,
 	return (xft_fatptr(src.mem + tokens[idx].lexeme.start, tokens[idx].lexeme.end - tokens[idx].lexeme.start));
 }
 
+// Clave del mapa (nombre + ámbito)
 __attribute__((__always_inline__, const))
 static inline t_imap_key	pdl__scope_key(t_buffer name, t_size scope)
 {
 	return ((t_imap_key){.key = name, .seed = scope});
 }
 
+// Guardar el valor
 __attribute__((__always_inline__, const))
 static inline t_size	pdl__symbol_to_value(t_symbol sym)
 {
 	return ((t_u_sym_32){.sym = sym}.u32);
 }
 
+// Mapa -> t_symbol
 __attribute__((__always_inline__, const))
 static inline t_symbol	pdl__value_to_symbol(t_size value)
 {
@@ -43,15 +46,18 @@ static inline void	pdl__pin_namespace_open(const t_symbol_table *__restrict__ co
 
 #undef ERR_NO_NAMESPACE
 
+// Crear tabla de símbolos
 t_symbol_table	pdl_new_symbol_table(t_allocator allocator)
 {
 	t_symbol_table	table;
 
-	table.scope_depth = 0;
-	table.symbol_map = xft_new_indexmap_with(allocator, 64);
-	table.simple_types = xft_new_vec(allocator, 32, sizeof(t_simple_attributes));
-	table.function_types = xft_new_vec(allocator, 16, sizeof(t_function_attributes));
-	table.arg_types = xft_new_vec(allocator, 32, sizeof(t_symbol_simple_type));
+	table.scope_depth = 0; // profundidad
+	table.symbol_map = xft_new_indexmap_with(allocator, 64); // capacidad del mapa = 64
+	table.simple_types = xft_new_vec(allocator, 32, sizeof(t_simple_attributes)); // Vector de tipos simples (32 espacios)
+	table.function_types = xft_new_vec(allocator, 16, sizeof(t_function_attributes)); // Vector de funciones (16 espacios)
+	table.arg_types = xft_new_vec(allocator, 32, sizeof(t_symbol_simple_type)); // Vector de argumentos de funciones (32 espacios)
+	
+	// Comprobaciones de errores de memoria
 	if (__builtin_expect(table.symbol_map.soa.ptr == nullptr
 		|| table.simple_types.buf.mem == nullptr
 		|| table.function_types.buf.mem == nullptr
@@ -67,6 +73,7 @@ t_symbol_table	pdl_new_symbol_table(t_allocator allocator)
 	return (table);
 }
 
+// Eliminar tabla de símbolos
 __attribute__((__nonnull__(2)))
 void	pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
 {
@@ -76,12 +83,14 @@ void	pdl_destroy_symbol_table(t_allocator allocator, t_symbol_table *table)
 	xft_vec_destroy(allocator, &table->arg_types);
 }
 
+// Entrar en un ámbito 1 nivel más profundo
 __attribute__((__always_inline__, __nonnull__(1), __used__))
 inline void	pdl_push_scope(t_symbol_table *table)
 {
 	++table->scope_depth;
 }
 
+// Cerrar ámbito actual, invalida los símbolos (destruir subtabla de símbolos)
 __attribute__((noinline, __used__, __nonnull__(1)))
 void	pdl_pop_namespace(t_symbol_table *table)
 {
@@ -103,6 +112,7 @@ void	pdl_pop_namespace(t_symbol_table *table)
 	table->scope_depth--;
 }
 
+// Insertar símbolo simple en el ámbito actual
 __attribute__((__nonnull__(2, 3)))
 t_result	pdl_intern_simple_symbol_to_current_namespace(
 	t_allocator										allocator,
@@ -113,7 +123,7 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 	t_symbol_simple_type							typeof_sym
 )
 {
-	const t_buffer				key = pdl__token_name(src, tokens, idx_of_token);
+	const t_buffer				key = pdl__token_name(src, tokens, idx_of_token); // Nombre
 	const t_simple_attributes	*attrs;
 	t_simple_attributes			attr;
 	t_size						index;
@@ -121,7 +131,7 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 
 	pdl__pin_namespace_open(table);
 
-	scope = table->scope_depth - 1;
+	scope = table->scope_depth - 1; // Ámbito 1 = 0
 	attrs = (const t_simple_attributes *)table->simple_types.buf.mem;
 	index = xft_vec_len(&table->simple_types, sizeof(t_simple_attributes));
 	attr = (t_simple_attributes){
@@ -130,13 +140,17 @@ t_result	pdl_intern_simple_symbol_to_current_namespace(
 		.type = typeof_sym,
 		.scope = (t_u16a)scope,
 	};
+
+	// Offset relativo
 	if (index && attrs[index - 1].scope == scope)
 		attr.relative_offset = attrs[index - 1].relative_offset + 1;
 
+	// Añadir attributo al vector
 	if (__builtin_expect(xft_vec_push_back(allocator, &table->simple_types,
 			(t_any)&attr, sizeof(attr)) == KO, 0))
 		return (KO);
 
+	// Insertar en la tabla
 	if (__builtin_expect(xft_indexmap_insert_seeded(allocator, &table->symbol_map, pdl__scope_key(key, scope),
 			pdl__symbol_to_value((t_symbol){.type = SYMT_SIMPLE, .index_to_dense_array = (t_u32a)index})) == KO, 0))
 	{
